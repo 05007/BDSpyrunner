@@ -52,6 +52,7 @@ unsigned short runningCommandCount = 0;//正在执行的命令数
 static Scoreboard* scoreboard;//储存计分板名称
 #pragma endregion
 #pragma region 函数定义
+void init();
 // 判断指针是否为玩家列表中指针
 static bool checkIsPlayer(void* p) {
 	return playerSign[(Player*)p];
@@ -457,28 +458,6 @@ static PyModuleDef mcModule = {
 static PyObject* PyInit_mc() {
 	return PyModule_Create(&mcModule);
 }
-// 插件载入
-void init() {
-	pr(u8"[插件]BDSPyrunner加载成功");
-	Py_LegacyWindowsStdioFlag = 1;
-	PyImport_AppendInittab("mc", &PyInit_mc); //增加一个模块
-	Py_Initialize();
-	//PyEval_InitThreads();
-	_finddata64i32_t fileinfo;//用于查找的句柄
-	long long handle = _findfirst64i32("./py/*.py", &fileinfo);
-	FILE* f;
-	// 未找到插件不需要执行
-	if (handle != -1LL)
-		do {
-			Py_NewInterpreter();
-			cout << u8"读取Py文件:" << fileinfo.name << endl;
-			char fn[32] = "./py/";
-			strcat(fn, fileinfo.name);
-			f = fopen(fn, "rb");
-			PyRun_SimpleFileExFlags(f, fileinfo.name, 1, 0);
-		} while (!_findnext64i32(handle, &fileinfo));
-		_findclose(handle);
-}
 #pragma endregion
 #pragma region THook列表
 // 获取指令队列
@@ -810,11 +789,12 @@ THook(bool, "?_playerChangeDimension@Level@@AEAA_NPEAVPlayer@@AEAVChangeDimensio
 // 生物死亡
 THook(void, "?die@Mob@@UEAAXAEBVActorDamageSource@@@Z",
 	Mob* _this, void* dmsg) {
-	PyObject* args = PyDict_New(); char v72; VA v2[2];
-	v2[0] = (VA)_this;
-	v2[1] = (VA)dmsg;
-	VA v7 = *((VA*)(v2[0] + 816));
-	VA* srActid = (VA*)(*(VA(__fastcall**)(VA, char*))(*(VA*)v2[1] + 64))(v2[1], &v72);
+	PyObject* args = PyDict_New();
+	char v72;
+	VA v0 = (VA)_this;
+	VA v1 = (VA)dmsg;
+	VA v7 = *((VA*)(v0 + 816));
+	VA* srActid = (VA*)(*(VA(__fastcall**)(VA, char*))(*(VA*)v1 + 64))(v1, &v72);
 	Actor* SrAct = SYMCALL(Actor*, "?fetchEntity@Level@@QEBAPEAVActor@@UActorUniqueID@@_N@Z",
 		v7, *srActid, 0);
 	string sr_name = "";
@@ -962,3 +942,28 @@ THook(void*, "??0ServerScoreboard@@QEAA@VCommandSoftEnumRegistry@@PEAVLevelStora
 	return scoreboard;
 }
 #pragma endregion
+// 插件载入
+void init() {
+	pr(u8"[插件]BDSPyrunner加载成功");
+	FILE* f;
+	f = fopen("UTF-8","r");
+	if (f)fclose(f);
+	else Py_LegacyWindowsStdioFlag = 1;
+	PyImport_AppendInittab("mc", &PyInit_mc); //增加一个模块
+	Py_Initialize();
+	//PyEval_InitThreads();
+	_finddata64i32_t fileinfo;//用于查找的句柄
+	long long handle = _findfirst64i32("./py/*.py", &fileinfo);
+
+	// 未找到插件不需要执行
+	if (handle != -1LL)
+		do {
+			Py_NewInterpreter();
+			cout << u8"读取Py文件:" << fileinfo.name << endl;
+			char fn[32] = "./py/";
+			strcat(fn, fileinfo.name);
+			f = fopen(fn, "rb");
+			PyRun_SimpleFileExFlags(f, fileinfo.name, 1, 0);
+		} while (!_findnext64i32(handle, &fileinfo));
+		_findclose(handle);
+}

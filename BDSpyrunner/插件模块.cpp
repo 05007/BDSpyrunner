@@ -53,10 +53,6 @@ static Scoreboard* scoreboard;//储存计分板名称
 #pragma endregion
 #pragma region 函数定义
 void init();
-// 判断指针是否为玩家列表中指针
-static bool checkIsPlayer(void* p) {
-	return playerSign[(Player*)p];
-}
 // UTF-8 转 GBK
 static string UTF8ToGBK(const char* strUTF8)
 {
@@ -94,8 +90,9 @@ static string GBKToUTF8(const char* strGBK)
 // 多线程延时
 static void delay(int time, PyObject* func) {
 	Sleep(time);
-	PyObject_CallFunction(func, 0);
-	return;
+	if (PyCallable_Check(func))
+		PyObject_CallFunction(func, 0);
+	Py_DECREF(func);
 }
 // 执行后端指令
 static bool runcmd(string cmd) {
@@ -216,17 +213,12 @@ static bool runcmdAs(string uuid, const char* cmd) {
 	}
 	return false;
 }
+// 判断指针是否为玩家列表中指针
+inline bool checkIsPlayer(void* p) {
+	return playerSign[(Player*)p];
+}
 #pragma endregion
 #pragma region api函数
-// 标准流输出
-static PyObject* api_log(PyObject* self, PyObject* args) {
-	const char* msg = 0;
-	int num = 0;
-	if (PyArg_ParseTuple(args, "s", &msg))pr(msg);
-	else if (PyArg_ParseTuple(args, "i", &num))pr(num);
-	PyErr_Clear();
-	return Py_None;
-}
 // 指令输出
 static PyObject* api_logout(PyObject* self, PyObject* args) {
 	const char* msg;
@@ -237,7 +229,6 @@ static PyObject* api_logout(PyObject* self, PyObject* args) {
 }
 // 执行指令
 static PyObject* api_runCmd(PyObject* self, PyObject* args) {
-	PyObject* pArgs = NULL;
 	const char* cmd = 0;
 	if (PyArg_ParseTuple(args, "s", &cmd))
 		runcmd(cmd);
@@ -248,9 +239,9 @@ static PyObject* api_setTimeout(PyObject* self, PyObject* args) {
 	int time = 0;
 	PyObject* func = 0;
 	if (PyArg_ParseTuple(args, "Oi", &func, &time)) {
-		thread t(delay, time, func);
-		t.detach();
+		thread(delay, time, func).detach();
 	}
+	Py_DECREF(func);
 	return Py_None;
 }
 // 获取在线玩家列表
@@ -262,7 +253,8 @@ static PyObject* api_getOnLinePlayers(PyObject* self, PyObject* args) {
 			PyDict_SetItemString(ret, p->getNameTag().c_str(), Py_BuildValue("[s,s]", p->getUuid()->toString().c_str(), p->getXuid(p_level).c_str()));
 		}
 	}
-	return Py_BuildValue("O", ret);
+	thread(delay, 1, ret).detach();
+	return ret;
 }
 // 设置监听
 static PyObject* api_setListener(PyObject* self, PyObject* args) {
@@ -341,7 +333,7 @@ static PyObject* api_getPlayerInfo(PyObject* self, PyObject* args) {
 				"XYZ", pp->x, pp->y, pp->z,
 				"dimensionid", did,
 				"isstand", st,
-				"health",h
+				"health", h
 			);
 		}
 	}
@@ -441,7 +433,6 @@ static PyObject* api_teleport(PyObject* self, PyObject* args) {
 }
 // 方法列表
 static PyMethodDef mcMethods[] = {
-	{"log", api_log, METH_VARARGS,""},
 	{"logout", api_logout, METH_VARARGS,""},
 	{"runcmd", api_runCmd, METH_VARARGS,""},
 	{"setTimeout", api_setTimeout, METH_VARARGS,""},
@@ -958,7 +949,7 @@ THook(void*, "??0ServerScoreboard@@QEAA@VCommandSoftEnumRegistry@@PEAVLevelStora
 }
 // 测试传送
 THook(void, "?teleportTo@Player@@UEAAXAEBVVec3@@_NHHAEBUActorUniqueID@@@Z",
-	Player* _this,Vec3* v3,bool a3,int a4,int a5) {
+	Player* _this, Vec3* v3, bool a3, int a4, int a5) {
 	pr(a3); pr(a4); pr(a5); pr(_this->getUniqueID());
 	//pr(v3->x); pr(v3->y); pr(v3->z);
 	original(_this, v3, a3, a4, a5);
@@ -966,7 +957,7 @@ THook(void, "?teleportTo@Player@@UEAAXAEBVVec3@@_NHHAEBUActorUniqueID@@@Z",
 #pragma endregion
 // 插件载入
 void init() {
-	pr(u8"[插件]BDSPyrunner加载成功");
+	pr(u8"[插件]BDSPyrunner加载成功~");
 	PyStatus status;
 	PyPreConfig cfg;
 	PyPreConfig_InitIsolatedConfig(&cfg);

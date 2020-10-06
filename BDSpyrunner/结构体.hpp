@@ -1,5 +1,6 @@
 #pragma once
 #include "预编译头.h"
+#include "Component.h"
 using namespace std;
 struct BlockLegacy {
 	string getBlockName() {
@@ -68,10 +69,13 @@ struct MCUUID {
 struct Vec3 {
 	float x, y, z;
 };
+struct Vec2 {
+	float x, y;
+};
 struct MobEffectInstance {
 	char fill[0x1C];
 };
-struct Item{
+struct Item {
 };
 struct ItemStackBase {
 	VA vtable;
@@ -189,30 +193,22 @@ struct Actor {
 			&actor_typename, this);
 		return actor_typename;
 	}
-
 	// 获取实体类型
 	int getEntityTypeId() {
-		return SYMCALL(int,
-			"?getEntityTypeId@Actor@@UEBA?AW4ActorType@@XZ",
+		return SYMCALL(int, "?getEntityTypeId@Actor@@UEBA?AW4ActorType@@XZ",
 			this);
-		//		if (t == 1)		// 未知类型，可能是玩家
-		//			return 319;
 	}
-
 	// 获取查询用ID
 	VA* getUniqueID() {
 		return SYMCALL(VA*, "?getUniqueID@Actor@@QEBAAEBUActorUniqueID@@XZ", this);
 	}
-
 	// 获取实体名称
 	string getEntityTypeName() {
 		string en_name;
-		SYMCALL(string&,
-			"?EntityTypeToLocString@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@W4ActorType@@W4ActorTypeNamespaceRules@@@Z",
+		SYMCALL(string&, "?EntityTypeToLocString@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@W4ActorType@@W4ActorTypeNamespaceRules@@@Z",
 			&en_name, getEntityTypeId());
 		return en_name;
 	}
-
 	// 更新属性
 	VA updateAttrs() {
 		return SYMCALL(VA, "?_sendDirtyActorData@Actor@@QEAAXXZ", this);
@@ -220,6 +216,44 @@ struct Actor {
 	// 添加一个状态
 	VA addEffect(VA ef) {
 		return SYMCALL(VA, "?addEffect@Actor@@QEAAXAEBVMobEffectInstance@@@Z", this, ef);
+	}
+	// 设置坐标
+	void setPosition(float x, float y, float z) {
+		Vec3 v; v.x = x; v.y = y; v.z = z;
+		int v9 = (int)ActorType::Undefined_2;		// IDA ScriptPositionComponent::applyComponentTo
+		(*(void(__fastcall**)(Actor*, Vec3*, VA, VA, signed int, VA*))(*(VA*)this + 264))(
+			this, &v, 1, 0, v9, (VA*)SYM("?INVALID_ID@ActorUniqueID@@2U1@B"));
+		if (this->getEntityTypeId() == 319) {
+			v9 = (int)ActorType::Player_0;
+			SYMCALL(VA, "?teleportTo@Player@@UEAAXAEBVVec3@@_NHHAEBUActorUniqueID@@@Z",
+				this, &v, 1, 0, v9, this->getUniqueID());
+		}
+	}
+	// 获取生命值
+	void getHealth(float &value,float &max) {
+		VA bpattrmap = ((VA*)this)[135];			// IDA ScriptHealthComponent::retrieveComponentFrom
+		if (bpattrmap) {
+			VA hattr = SYMCALL(VA, "?getMutableInstance@BaseAttributeMap@@QEAAPEAVAttributeInstance@@I@Z",
+				bpattrmap, SYM_OBJECT(UINT32, 0x019700B8 + 4));// SharedAttributes::HEALTH
+			if (hattr) {
+				value = *((float*)hattr + 33);
+				max = *((float*)hattr + 32);
+			}
+		}
+	}
+	bool setHealth(float &value, float &max) {
+		VA bpattrmap = ((VA*)this)[135];
+		if (bpattrmap) {
+			VA hattr = SYMCALL(VA, "?getMutableInstance@BaseAttributeMap@@QEAAPEAVAttributeInstance@@I@Z",
+				bpattrmap, SYM_OBJECT(UINT32, 0x019700B8 + 4));// SharedAttributes::HEALTH
+			if (hattr) {
+				*((float*)hattr + 33) = value;
+				*((float*)hattr + 32) = max;
+				SYMCALL(VA, "?_setDirty@AttributeInstance@@AEAAXXZ", hattr);
+				return true;
+			}
+		}
+		return false;
 	}
 };
 struct Mob : Actor {

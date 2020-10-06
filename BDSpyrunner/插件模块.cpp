@@ -328,18 +328,20 @@ static PyObject* api_getHand(PyObject* self, PyObject* args) {
 	}
 	return Py_None;
 }
-// 获取玩家位置
+// 获取玩家信息
 static PyObject* api_getPlayerInfo(PyObject* self, PyObject* args) {
 	const char* uuid;
 	if (PyArg_ParseTuple(args, "s", &uuid)) {
 		Player* p = onlinePlayers[uuid];
 		if (playerSign[p]) {
 			getPlayerInfo(p);
-			return Py_BuildValue("{s:s,s:[f,f,f],s:i,s:i}",
+			float hm, h; p->getHealth(hm, h);
+			return Py_BuildValue("{s:s,s:[f,f,f],s:i,s:i,s:f}",
 				"playername", pn,
 				"XYZ", pp->x, pp->y, pp->z,
 				"dimensionid", did,
-				"isstand", st
+				"isstand", st,
+				"health",h
 			);
 		}
 	}
@@ -428,6 +430,15 @@ static PyObject* api_runcmdAs(PyObject* self, PyObject* args) {
 	}
 	return Py_None;
 }
+// 传送玩家
+static PyObject* api_teleport(PyObject* self, PyObject* args) {
+	const char* pn; float x, y, z; int did;
+	if (PyArg_ParseTuple(args, "sfffi", &pn, &x, &y, &z, &did)) {
+		Player* p = onlinePlayers[pn];
+		pr(u8"无效的函数:teleport");//p->setPosition(x,y,z);
+	}
+	return Py_None;
+}
 // 方法列表
 static PyMethodDef mcMethods[] = {
 	{"log", api_log, METH_VARARGS,""},
@@ -447,6 +458,7 @@ static PyMethodDef mcMethods[] = {
 	{"getPlayerScore", api_getPlayerScore, METH_VARARGS,""},
 	{"talkAs", api_talkAs, METH_VARARGS,""},
 	{"runcmdAs", api_runcmdAs, METH_VARARGS,""},
+	{"teleport",api_teleport, METH_VARARGS,""},
 	{NULL,NULL,NULL,NULL}
 };
 // 模块声明
@@ -522,22 +534,6 @@ THook(void, "?_onPlayerLeft@ServerNetworkHandler@@AEAAXPEAVServerPlayer@@_N@Z",
 	);
 	return original(_this, p, v3);
 }
-// 玩家使用物品2
-THook(void, "?useItem@GameMode@@UEAA_NAEAVItemStack@@@Z",
-	void* _this, ItemStack* is) {
-	Player* p = *(Player**)((VA)_this + 8);
-	getPlayerInfo(p);
-	CallAll("UseItem", "{s:s,s:[f,f,f],s:i,s:i,s:i,s:s,s:i}",
-		"playername", pn,
-		"XYZ", pp->x, pp->y, pp->z,
-		"dimensionid", did,
-		"itemid", is->getId(),
-		"itemaux", is->getAuxValue(),
-		"itemname", is->getName().c_str(),
-		"isstand", st
-	);
-	return original(_this, is);
-}
 // 玩家捡起物品
 THook(char, "?take@Player@@QEAA_NAEAVActor@@HH@Z",
 	Player* p, Actor* a, VA a3, VA a4) {
@@ -546,7 +542,7 @@ THook(char, "?take@Player@@QEAA_NAEAVActor@@HH@Z",
 	return original(p, a, a3, a4);
 }
 // 玩家操作物品
-/*THook(bool, "?useItemOn@GameMode@@UEAA_NAEAVItemStack@@AEBVBlockPos@@EAEBVVec3@@PEBVBlock@@@Z",
+THook(bool, "?useItemOn@GameMode@@UEAA_NAEAVItemStack@@AEBVBlockPos@@EAEBVVec3@@PEBVBlock@@@Z",
 	void* _this, ItemStack* item, BlockPos* bp, unsigned __int8 a4, void* v5, Block* b) {
 	Player* p = *(Player**)((VA)_this + 8);
 	getPlayerInfo(p);
@@ -569,7 +565,22 @@ THook(char, "?take@Player@@QEAA_NAEAVActor@@HH@Z",
 		"isstand", st
 	);
 	RET(_this, item, bp, a4, v5, b);
-}*/
+}
+// 物品
+THook(bool, "?useOn@ItemStack@@QEAA_NAEAVActor@@HHHEMMM@Z",
+	ItemStack* is, Actor* p, int a3, int a4, int a5, int a6, float a7, float a8, float a9) {
+	getPlayerInfo(p);
+	CallAll("UseItem", "{s:s,s:[f,f,f],s:i,s:i,s:i,s:s,s:i}",
+		"playername", pn,
+		"XYZ", pp->x, pp->y, pp->z,
+		"dimensionid", did,
+		"itemid", is->getId(),
+		"itemaux", is->getAuxValue(),
+		"itemname", is->getName().c_str(),
+		"isstand", st
+	);
+	RET(is, p, a3, a4, a5, a6, a7, a8, a9);
+}
 // 玩家放置方块
 THook(bool, "?mayPlace@BlockSource@@QEAA_NAEBVBlock@@AEBVBlockPos@@EPEAVActor@@_N@Z",
 	BlockSource* _this, Block* b, BlockPos* bp, unsigned __int8 a4, struct Actor* p, bool _bool) {
@@ -615,7 +626,7 @@ THook(bool, "?_destroyBlockInternal@GameMode@@AEAA_NAEBVBlockPos@@E@Z",
 // 控制台输入
 THook(bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@AEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
 	VA _this, string* cmd) {
-	if (*cmd == "pyreload\r") {
+	if (*cmd == "pyreload") {
 		if (!Py_FinalizeEx()) {
 			funcs.clear();
 			init();
@@ -627,7 +638,7 @@ THook(bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$a
 		runningCommandCount--;
 		return original(_this, cmd);
 	}
-	CallAll("ServerCmd", "{s:s}", "cmd", (*cmd).substr(0, (*cmd).length() - 1));
+	CallAll("ServerCmd", "{s:s}", "cmd", *cmd);
 	RET(_this, cmd);
 }
 // 玩家开箱准备
@@ -748,7 +759,7 @@ THook(void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormResponsePacket@
 				"isstand", st,
 				"uuid", p->getUuid()->toString().c_str(),
 				"selected", fmp->getSelectStr().c_str(),
-				"formid",fid
+				"formid", fid
 			);
 			return;
 		}
@@ -760,14 +771,17 @@ THook(bool, "?attack@Player@@UEAA_NAEAVActor@@@Z",
 	Player* p, Actor* a) {
 	string an = a->getNameTag();
 	string atn = a->getTypeName();
+	float hm, h;
+	a->getHealth(hm, h);
 	getPlayerInfo(p);
-	CallAll("Attack", "{s:s,s:[f,f,f],s:i,s:i,s:s,s:s}",
+	CallAll("Attack", "{s:s,s:[f,f,f],s:i,s:i,s:s,s:s,s:f}",
 		"playername", pn,
 		"XYZ", pp->x, pp->y, pp->z,
 		"dimensionid", did,
 		"isstand", st,
 		"actorname", an.c_str(),
-		"actortype", atn.c_str()
+		"actortype", atn.c_str(),
+		"actorhealth", h
 	);
 	RET(p, a);
 }
@@ -826,11 +840,11 @@ THook(void, "?die@Mob@@UEAAXAEBVActorDamageSource@@@Z",
 	PyDict_SetItemString(args, "srctype", Py_BuildValue("s", sr_type.c_str()));
 	PyDict_SetItemString(args, "dmcase", Py_BuildValue("i", *((unsigned*)dmsg + 2)));
 	CallAll("MobDie", "O", args);
-	if(res) original(_this, dmsg);
+	if (res) original(_this, dmsg);
 }
 // 生物受伤
 THook(bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
-	Mob* _this,void* dmsg,int a3,int a4,bool a5) {
+	Mob* _this, void* dmsg, int a3, int a4, bool a5) {
 	PyObject* args = PyDict_New();
 	char v72;
 	VA v0 = (VA)_this;
@@ -937,33 +951,41 @@ THook(void, "?setup@ChangeSettingCommand@@SAXAEAVCommandRegistry@@@Z",
 	original(_this);
 }
 // 计分板命令注册（开服时获取所有的计分板名称）
-THook(void*, "??0ServerScoreboard@@QEAA@VCommandSoftEnumRegistry@@PEAVLevelStorage@@@Z", void* _this, void* a2, void* a3) {
+THook(void*, "??0ServerScoreboard@@QEAA@VCommandSoftEnumRegistry@@PEAVLevelStorage@@@Z",
+	void* _this, void* a2, void* a3) {
 	scoreboard = (Scoreboard*)original(_this, a2, a3);
 	return scoreboard;
+}
+// 测试传送
+THook(void, "?teleportTo@Player@@UEAAXAEBVVec3@@_NHHAEBUActorUniqueID@@@Z",
+	Player* _this,Vec3* v3,bool a3,int a4,int a5) {
+	pr(a3); pr(a4); pr(a5); pr(_this->getUniqueID());
+	//pr(v3->x); pr(v3->y); pr(v3->z);
+	original(_this, v3, a3, a4, a5);
 }
 #pragma endregion
 // 插件载入
 void init() {
 	pr(u8"[插件]BDSPyrunner加载成功");
-	FILE* f;
-	f = fopen("UTF-8","r");
-	if (f)fclose(f);
-	else Py_LegacyWindowsStdioFlag = 1;
+	PyStatus status;
+	PyPreConfig cfg;
+	PyPreConfig_InitIsolatedConfig(&cfg);
+	cfg.utf8_mode = 1;
+	cfg.isolated = 1;
+	status = Py_PreInitialize(&cfg);
+	if (PyStatus_Exception(status))Py_ExitStatusException(status);
 	PyImport_AppendInittab("mc", &PyInit_mc); //增加一个模块
 	Py_Initialize();
-	//PyEval_InitThreads();
 	_finddata64i32_t fileinfo;//用于查找的句柄
 	long long handle = _findfirst64i32("./py/*.py", &fileinfo);
-
-	// 未找到插件不需要执行
-	if (handle != -1LL)
-		do {
-			Py_NewInterpreter();
-			cout << u8"读取Py文件:" << fileinfo.name << endl;
-			char fn[32] = "./py/";
-			strcat(fn, fileinfo.name);
-			f = fopen(fn, "rb");
-			PyRun_SimpleFileExFlags(f, fileinfo.name, 1, 0);
-		} while (!_findnext64i32(handle, &fileinfo));
-		_findclose(handle);
+	FILE* f;
+	do {
+		Py_NewInterpreter();
+		cout << u8"读取Py文件:" << fileinfo.name << endl;
+		char fn[32] = "./py/";
+		strcat(fn, fileinfo.name);
+		f = fopen(fn, "rb");
+		PyRun_SimpleFileExFlags(f, fileinfo.name, 1, 0);
+	} while (!_findnext64i32(handle, &fileinfo));
+	_findclose(handle);
 }

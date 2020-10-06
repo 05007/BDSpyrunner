@@ -1,6 +1,4 @@
-#ifndef PCH_H
-#define PCH_H
-
+#pragma once
 //----------------------------------
 // 引用头文件
 //----------------------------------
@@ -176,4 +174,18 @@ extern THookRegister THookRegisterTemplate;
 #define TClasslessInstanceHook(ret, sym, ...) TClasslessInstanceHook2(sym, ret, sym, __VA_ARGS__)
 #define TInstanceHook2(iname, ret, sym, type, ...) _TInstanceDefHook(iname, sym, ret, type, __VA_ARGS__)
 #define TInstanceHook(ret, sym, type, ...) TInstanceHook2(sym, ret, sym, type, __VA_ARGS__)
-#endif //PCH_H
+
+//----------------------------------
+// 其他
+//----------------------------------
+#define REF(PTR)										(&PTR)
+#define DEREF(PTR)										(*PTR)
+#define OBJECT(TYPE, VALUE)								reinterpret_cast<TYPE>(VALUE)
+
+#define POINTER(PTR_TYPE, PTR)							OBJECT(PTR_TYPE, PTR)
+#define POINTER_ADD_OFFSET(TYPE, PTR, OFFSET)			POINTER(TYPE, POINTER(VA, PTR)+OFFSET)
+#define CLASS_OBJECT(TYPE, THISPTR, OFFSET)				DEREF(POINTER_ADD_OFFSET(Ptr<TYPE>, THISPTR, OFFSET))
+#define CLASS_VTABLE_OBJECT(TYPE, THISPTR, OFFSET)		DEREF(POINTER(Ptr<TYPE>, DEREF(POINTER(Ptr<VA>, THISPTR))+OFFSET))
+
+#define SYM_POINT(TYPE, SYM_RVA)						POINTER_ADD_OFFSET(Ptr<TYPE>, GetModuleHandle(NULL), SYM_RVA)
+#define SYM_OBJECT(TYPE, SYM_RVA)						DEREF(POINTER_ADD_OFFSET(Ptr<TYPE>, GetModuleHandle(NULL), SYM_RVA))

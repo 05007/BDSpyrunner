@@ -7,20 +7,17 @@ using namespace std;
 #pragma region 宏定义
 //调用所有函数
 #define CallAll(type,...) \
-	PyObject* ret = 0;\
-	int res = -1;\
-	unsigned i = 0;\
+	int ret,i = 0;bool bar = true;\
 	while(PyCallable_Check(funcs[type][i])){\
-		ret = PyObject_CallFunction(funcs[type][i++],__VA_ARGS__);\
-		}\
-	if (ret)\
-		PyArg_Parse(ret, "p", &res);\
+		PyArg_Parse(PyObject_CallFunction(funcs[type][i++],__VA_ARGS__), "p", &ret);\
+		if(!ret)bar = false;\
+	}\
 	PyErr_Print()
 //标准流输出信息
 #define pr(...) cout <<__VA_ARGS__<<endl
 //THook返回判断
 #define RET(...) \
-	if (res) return original(__VA_ARGS__);\
+	if (bar) return original(__VA_ARGS__);\
 	else return 0
 //根据Player*获取玩家基本信息
 #define getPlayerInfo(p) \
@@ -42,8 +39,8 @@ using namespace std;
 static VA p_spscqueue = 0;
 static VA p_level = 0;
 static VA p_ServerNetworkHandle = 0;
-static VA STD_COUT_HANDLE = *(VA*)SYM("__imp_?cout@std@@3V?$basic_ostream@DU?$char_traits@D@std@@@1@A");
-static unordered_map<string, PyObject* [15]> funcs;//py函数
+static const VA STD_COUT_HANDLE = *(VA*)SYM("__imp_?cout@std@@3V?$basic_ostream@DU?$char_traits@D@std@@@1@A");
+static unordered_map<string, PyObject* [10]> funcs;//py函数
 static unordered_map<string, Player*> onlinePlayers;//在线玩家
 static unordered_map<Player*, bool> playerSign;//玩家在线
 static map<unsigned, bool> fids;//表单ID
@@ -52,7 +49,32 @@ unsigned short runningCommandCount = 0;//正在执行的命令数
 static Scoreboard* scoreboard;//储存计分板名称
 #pragma endregion
 #pragma region 函数定义
-void init();
+// 插件载入
+static PyObject* PyInit_mc();
+void init() {
+	pr(u8"[插件]BDSPyrunner加载成功~");
+	PyStatus status;
+	PyPreConfig cfg;
+	PyPreConfig_InitIsolatedConfig(&cfg);
+	cfg.utf8_mode = 1;
+	cfg.isolated = 1;
+	status = Py_PreInitialize(&cfg);
+	if (PyStatus_Exception(status))Py_ExitStatusException(status);
+	PyImport_AppendInittab("mc", &PyInit_mc); //增加一个模块
+	Py_Initialize();
+	FILE* f;
+	_finddata64i32_t fileinfo;//用于查找的句柄
+	long long handle = _findfirst64i32("./py/*.py", &fileinfo);
+	do {
+		Py_NewInterpreter();
+		cout << u8"读取Py文件:" << fileinfo.name << endl;
+		char fn[32] = "./py/";
+		strcat(fn, fileinfo.name);
+		f = fopen(fn, "rb");
+		PyRun_SimpleFileExFlags(f, fileinfo.name, 1, 0);
+	} while (!_findnext64i32(handle, &fileinfo));
+	_findclose(handle);
+}
 // UTF-8 转 GBK
 static string UTF8ToGBK(const char* strUTF8)
 {
@@ -127,7 +149,7 @@ static bool releaseForm(unsigned fid)
 	}
 	return false;
 }
-// 发送一个SimpleForm的表单数据包
+// 发送一个表单数据包
 static unsigned sendForm(string uuid, string str)
 {
 	unsigned fid = getFormId();
@@ -135,8 +157,7 @@ static unsigned sendForm(string uuid, string str)
 	auto fr = [uuid, fid, str]() {
 		Player* p = onlinePlayers[uuid];
 		if (playerSign[p]) {
-			VA tpk;
-			//ModalFormRequestPacket sec;
+			VA tpk;//ModalFormRequestPacket
 			SYMCALL(VA, "?createPacket@MinecraftPackets@@SA?AV?$shared_ptr@VPacket@@@std@@W4MinecraftPacketIds@@@Z",
 				&tpk, 100);
 			*(VA*)(tpk + 40) = fid;
@@ -146,6 +167,21 @@ static unsigned sendForm(string uuid, string str)
 	};
 	safeTick(fr);
 	return fid;
+}// 发送一个表单数据包
+// 跨服传送
+static bool transferServer(string uuid, string address, int port)
+{
+	Player* p = onlinePlayers[uuid];
+	if (playerSign[p]) {
+		VA tpk;//TransferPacket
+		SYMCALL(VA, "?createPacket@MinecraftPackets@@SA?AV?$shared_ptr@VPacket@@@std@@W4MinecraftPacketIds@@@Z",
+			&tpk, 85);
+		*(string*)(tpk + 40) = address;
+		*(VA*)(tpk + 72) = port;
+		p->sendPacket(tpk);
+		return true;
+	}
+	return false;
 }
 // 命令输出
 static void logout(string str) {
@@ -241,7 +277,6 @@ static PyObject* api_setTimeout(PyObject* self, PyObject* args) {
 	if (PyArg_ParseTuple(args, "Oi", &func, &time)) {
 		thread(delay, time, func).detach();
 	}
-	Py_DECREF(func);
 	return Py_None;
 }
 // 获取在线玩家列表
@@ -298,6 +333,16 @@ static PyObject* api_sendForm(PyObject* self, PyObject* args) {
 	const char* str;
 	if (PyArg_ParseTuple(args, "ss", &uuid, &str)) {
 		return Py_BuildValue("i", sendForm(uuid, str));
+	}
+	return Py_None;
+}
+// 跨服传送
+static PyObject* api_transferServer(PyObject* self, PyObject* args) {
+	const char* uuid;
+	const char* address;
+	int port;
+	if (PyArg_ParseTuple(args, "ssi", &uuid, &address, &port)) {
+		return Py_BuildValue("i", transferServer(uuid, address, port));
 	}
 	return Py_None;
 }
@@ -439,6 +484,7 @@ static PyMethodDef mcMethods[] = {
 	{"getOnLinePlayers", api_getOnLinePlayers, METH_NOARGS,""},
 	{"setListener", api_setListener, METH_VARARGS,""},
 	{"sendForm", api_sendForm, METH_VARARGS,""},
+	{"transferServer", api_transferServer, METH_VARARGS,""},
 	{"getHand", api_getHand, METH_VARARGS,""},
 	{"getPlayerInfo", api_getPlayerInfo, METH_VARARGS,""},
 	{"getPlayerPerm", api_getPlayerPerm, METH_VARARGS,""},
@@ -644,7 +690,6 @@ THook(bool, "?use@ChestBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@@Z",
 		"isstand", st
 	);
 	RET(_this, p, bp);
-	//return original(_this, p, bp);
 }
 // 玩家开桶准备
 THook(bool, "?use@BarrelBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@@Z",
@@ -726,12 +771,10 @@ THook(void, "?containerContentChanged@LevelContainerModel@@UEAAXH@Z",
 				"itemaux", iaux,
 				"slot", slot
 			);
+			return;
 		}
-		else
-			original(a1, slot);
 	}
-	else
-		original(a1, slot);
+	else original(a1, slot);
 }
 // 玩家选择表单
 THook(void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormResponsePacket@@$0A@@@UEBAXAEBVNetworkIdentifier@@AEAVNetEventCallback@@AEAV?$shared_ptr@VPacket@@@std@@@Z",
@@ -760,6 +803,8 @@ THook(void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormResponsePacket@
 // 玩家攻击
 THook(bool, "?attack@Player@@UEAA_NAEAVActor@@@Z",
 	Player* p, Actor* a) {
+	Vec3 v{ 100,80,90 };
+	//SYMCALL(bool, "?teleportTo@Player@@UEAAXAEBVVec3@@_NHHAEBUActorUniqueID@@@Z", p, v, 1, 3, 1);
 	string an = a->getNameTag();
 	string atn = a->getTypeName();
 	float hm, h;
@@ -831,7 +876,7 @@ THook(void, "?die@Mob@@UEAAXAEBVActorDamageSource@@@Z",
 	PyDict_SetItemString(args, "srctype", Py_BuildValue("s", sr_type.c_str()));
 	PyDict_SetItemString(args, "dmcase", Py_BuildValue("i", *((unsigned*)dmsg + 2)));
 	CallAll("MobDie", "O", args);
-	if (res) original(_this, dmsg);
+	if (ret) original(_this, dmsg);
 }
 // 生物受伤
 THook(bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
@@ -947,36 +992,10 @@ THook(void*, "??0ServerScoreboard@@QEAA@VCommandSoftEnumRegistry@@PEAVLevelStora
 	scoreboard = (Scoreboard*)original(_this, a2, a3);
 	return scoreboard;
 }
-// 测试传送
-THook(void, "?teleportTo@Player@@UEAAXAEBVVec3@@_NHHAEBUActorUniqueID@@@Z",
-	Player* _this, Vec3* v3, bool a3, int a4, int a5) {
-	pr(a3); pr(a4); pr(a5); pr(_this->getUniqueID());
-	//pr(v3->x); pr(v3->y); pr(v3->z);
-	original(_this, v3, a3, a4, a5);
+// 测试切换纬度
+THook(void, "?requestPlayerChangeDimension@Level@@QEAAXAEAVPlayer@@V?$unique_ptr@VChangeDimensionRequest@@U?$default_delete@VChangeDimensionRequest@@@std@@@std@@@Z",
+	Level* l, VA a1, VA a2) {
+	pr(a1); pr(a2);
+	original(l, a1, a2);
 }
 #pragma endregion
-// 插件载入
-void init() {
-	pr(u8"[插件]BDSPyrunner加载成功~");
-	PyStatus status;
-	PyPreConfig cfg;
-	PyPreConfig_InitIsolatedConfig(&cfg);
-	cfg.utf8_mode = 1;
-	cfg.isolated = 1;
-	status = Py_PreInitialize(&cfg);
-	if (PyStatus_Exception(status))Py_ExitStatusException(status);
-	PyImport_AppendInittab("mc", &PyInit_mc); //增加一个模块
-	Py_Initialize();
-	_finddata64i32_t fileinfo;//用于查找的句柄
-	long long handle = _findfirst64i32("./py/*.py", &fileinfo);
-	FILE* f;
-	do {
-		Py_NewInterpreter();
-		cout << u8"读取Py文件:" << fileinfo.name << endl;
-		char fn[32] = "./py/";
-		strcat(fn, fileinfo.name);
-		f = fopen(fn, "rb");
-		PyRun_SimpleFileExFlags(f, fileinfo.name, 1, 0);
-	} while (!_findnext64i32(handle, &fileinfo));
-	_findclose(handle);
-}

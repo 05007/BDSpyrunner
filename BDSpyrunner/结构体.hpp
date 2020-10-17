@@ -2,6 +2,7 @@
 #include "预编译头.h"
 #include "Component.h"
 using namespace std;
+#pragma region 方块
 struct BlockLegacy {
 	string getBlockName() {
 		return *(string*)((__int64)this + 112);
@@ -41,6 +42,7 @@ struct BlockSource {
 			this, bp);
 	}
 };
+#pragma endregion
 struct Dimension {
 	// 获取方块源
 	VA getBlockSouce() {					// IDA Level::tickEntities
@@ -159,6 +161,43 @@ struct ItemStack : ItemStackBase {
 			this);
 	}*/
 };
+#pragma region 包
+struct TextPacket {
+	char filler[0xC8];
+	// 取输入文本
+	string toString() {			// IDA ServerNetworkHandler::handle
+		string str = string(*(string*)((VA)this + 80));
+		return str;
+	}
+};
+struct CommandRequestPacket {
+	char filler[0x90];
+	// 取命令文本
+	string toString() {			// IDA ServerNetworkHandler::handle
+		string str = string(*(string*)((VA)this + 40));
+		return str;
+	}
+};
+struct ModalFormRequestPacket {
+	char filler[0x48];
+};
+struct ModalFormResponsePacket {
+	// 取发起表单ID
+	UINT getFormId() {
+		return *(UINT*)((VA)this + 40);
+	}
+	// 取选择序号
+	string getSelectStr() {
+		string x = *(string*)((VA)this + 48);
+		VA l = x.length();
+		if (x.c_str()[l - 1] == '\n') {
+			return l > 1 ? x.substr(0, l - 1) :
+				x;
+		}
+		return x;
+	}
+};
+#pragma endregion
 struct Actor {
 	// 获取生物名称信息
 	string getNameTag() {
@@ -230,22 +269,22 @@ struct Actor {
 		}
 	}
 	// 获取生命值
-	void getHealth(float &value,float &max) {
-		VA bpattrmap = ((VA*)this)[135];			// IDA ScriptHealthComponent::retrieveComponentFrom
+	void getHealth(float& value, float& max) {
+		VA bpattrmap = *((VA*)this + 135);// IDA ScriptHealthComponent::retrieveComponentFrom
 		if (bpattrmap) {
 			VA hattr = SYMCALL(VA, "?getMutableInstance@BaseAttributeMap@@QEAAPEAVAttributeInstance@@I@Z",
-				bpattrmap, SYM_OBJECT(UINT32, 0x019700B8 + 4));// SharedAttributes::HEALTH
+				bpattrmap, 7);//SYM_OBJECT(UINT32, 0x019700B8 + 4));// SharedAttributes::HEALTH
 			if (hattr) {
 				value = *((float*)hattr + 33);
 				max = *((float*)hattr + 32);
 			}
 		}
 	}
-	bool setHealth(float &value, float &max) {
+	bool setHealth(float& value, float& max) {
 		VA bpattrmap = ((VA*)this)[135];
 		if (bpattrmap) {
 			VA hattr = SYMCALL(VA, "?getMutableInstance@BaseAttributeMap@@QEAAPEAVAttributeInstance@@I@Z",
-				bpattrmap, SYM_OBJECT(UINT32, 0x019700B8 + 4));// SharedAttributes::HEALTH
+				bpattrmap, 7);// SYM_OBJECT(UINT32, 0x019700B8 + 4));// SharedAttributes::HEALTH
 			if (hattr) {
 				*((float*)hattr + 33) = value;
 				*((float*)hattr + 32) = max;
@@ -285,7 +324,11 @@ struct Player : Mob {
 	MCUUID* getUuid() {	// IDA ServerNetworkHandler::_createNewPlayer
 		return (MCUUID*)((char*)this + 2720);
 	}
-
+	// 发送包
+	void sendPacket(VA pkt) {
+		return SYMCALL(void, "?sendNetworkPacket@ServerPlayer@@UEBAXAEAVPacket@@@Z",
+			this, pkt);
+	}
 	// 根据地图信息获取玩家xuid
 	string& getXuid(VA level) {
 		return SYMCALL(string&, "?getPlayerXUID@Level@@QEBAAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBVUUID@mce@@@Z",
@@ -356,12 +399,8 @@ struct Player : Mob {
 		VA itm = (VA)this + 4472;				// IDA Player::drop
 		SYMCALL(VA, "?forceBalanceTransaction@InventoryTransactionManager@@QEAAXXZ", itm);
 	}
-	// 发送数据包
-	VA sendPacket(VA pkt) {
-		return SYMCALL(VA, "?sendNetworkPacket@ServerPlayer@@UEBAXAEAVPacket@@@Z",
-			this, pkt);
-	}
 };
+#pragma region 容器
 struct LevelContainerModel {
 	// 取开容者
 	Player* getPlayer() {
@@ -428,46 +467,11 @@ struct ContainerManagerModel {
 struct LevelContainerManagerModel
 	:ContainerManagerModel {
 };
-struct TextPacket {
-	char filler[0xC8];
-	// 取输入文本
-	string toString() {			// IDA ServerNetworkHandler::handle
-		string str = string(*(string*)((VA)this + 80));
-		return str;
-	}
-};
-struct CommandRequestPacket {
-	char filler[0x90];
-	// 取命令文本
-	string toString() {			// IDA ServerNetworkHandler::handle
-		string str = string(*(string*)((VA)this + 40));
-		return str;
-	}
-};
-struct ModalFormRequestPacket {
-	char filler[0x48];
-};
-struct ModalFormResponsePacket {
-	// 取发起表单ID
-	UINT getFormId() {
-		return *(UINT*)((VA)this + 40);
-	}
-	// 取选择序号
-	string getSelectStr() {
-		string x = *(string*)((VA)this + 48);
-		VA l = x.length();
-		if (x.c_str()[l - 1] == '\n') {
-			return l > 1 ? x.substr(0, l - 1) :
-				x;
-		}
-		return x;
-	}
-};
+#pragma endregion
+#pragma region 计分板
 struct ScoreboardId {
-	//
 };
 struct PlayerScoreboardId {
-	//
 };
 struct PlayerScore {
 	//  *(_QWORD *)this = *(_QWORD *)a2;//ScoreboardId *a2
@@ -538,3 +542,4 @@ struct Scoreboard {
 		return SYMCALL(int, "?modifyPlayerScore@Scoreboard@@QEAAHAEA_NAEBUScoreboardId@@AEAVObjective@@HW4PlayerScoreSetFunction@@@Z", this, a2, a3, a4, a5, a6);
 	}
 };
+#pragma endregion

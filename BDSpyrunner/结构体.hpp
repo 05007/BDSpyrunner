@@ -45,7 +45,7 @@ struct BlockSource {
 #pragma endregion
 struct Dimension {
 	// 获取方块源
-	VA getBlockSouce() {					// IDA Level::tickEntities
+	VA getBlockSouce() {// IDA Level::tickEntities
 		return *((VA*)this + 9);
 	}
 };
@@ -213,8 +213,7 @@ struct Actor {
 	}
 	// 获取生物当前所在坐标
 	Vec3* getPos() {
-		return SYMCALL(Vec3*, "?getPos@Actor@@UEBAAEBVVec3@@XZ",
-			this);
+		return SYMCALL(Vec3*, "?getPos@Actor@@UEBAAEBVVec3@@XZ", this);
 	}
 	// 是否悬空
 	const BYTE isStand() {				// IDA MovePlayerPacket::MovePlayerPacket
@@ -227,8 +226,7 @@ struct Actor {
 	// 获取生物类型
 	string getTypeName() {
 		string actor_typename;
-		SYMCALL(string&,
-			"?getEntityName@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBVActor@@@Z",
+		SYMCALL(string&, "?getEntityName@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBVActor@@@Z",
 			&actor_typename, this);
 		return actor_typename;
 	}
@@ -255,18 +253,6 @@ struct Actor {
 	// 添加一个状态
 	VA addEffect(VA ef) {
 		return SYMCALL(VA, "?addEffect@Actor@@QEAAXAEBVMobEffectInstance@@@Z", this, ef);
-	}
-	// 设置坐标
-	void setPosition(float x, float y, float z) {
-		Vec3 v; v.x = x; v.y = y; v.z = z;
-		int v9 = (int)ActorType::Undefined_2;		// IDA ScriptPositionComponent::applyComponentTo
-		(*(void(__fastcall**)(Actor*, Vec3*, VA, VA, signed int, VA*))(*(VA*)this + 264))(
-			this, &v, 1, 0, v9, (VA*)SYM("?INVALID_ID@ActorUniqueID@@2U1@B"));
-		if (this->getEntityTypeId() == 319) {
-			v9 = (int)ActorType::Player_0;
-			SYMCALL(VA, "?teleportTo@Player@@UEAAXAEBVVec3@@_NHHAEBUActorUniqueID@@@Z",
-				this, &v, 1, 0, v9, this->getUniqueID());
-		}
 	}
 	// 获取生命值
 	void getHealth(float& value, float& max) {
@@ -343,7 +329,6 @@ struct Player : Mob {
 	VA getNetId() {
 		return (VA)this + 2432;		// IDA ServerPlayer::setPermissions
 	}
-
 	VA getContainerManager() {
 		return (VA)this + 2912;		// IDA Player::setContainerManager
 	}
@@ -398,6 +383,11 @@ struct Player : Mob {
 	void updateInventory() {
 		VA itm = (VA)this + 4472;				// IDA Player::drop
 		SYMCALL(VA, "?forceBalanceTransaction@InventoryTransactionManager@@QEAAXXZ", itm);
+	}
+	//传送
+	void teleport(Vec3 target, int dim) {
+		SYMCALL(void, "?teleport@TeleportCommand@@SAXAEAVActor@@VVec3@@PEAV3@V?$AutomaticID@VDimension@@H@@VRelativeFloat@@4HAEBUActorUniqueID@@@Z",
+			this, target, 0, dim, 0, 0, 0, SYM("?INVALID_ID@ActorUniqueID@@2U1@B"));
 	}
 };
 #pragma region 容器

@@ -36,16 +36,15 @@ using namespace std;
 	}
 #pragma endregion
 #pragma region 全局变量
-static VA p_spscqueue = 0;
-static VA p_level = 0;
-static VA p_ServerNetworkHandle = 0;
+static VA cmd_queue = 0;
+static VA level = 0;
+static VA server_network_handle = 0;
 static const VA STD_COUT_HANDLE = *(VA*)SYM("__imp_?cout@std@@3V?$basic_ostream@DU?$char_traits@D@std@@@1@A");
 static unordered_map<string, PyObject* [10]> funcs;//py函数
 static unordered_map<string, Player*> onlinePlayers;//在线玩家
 static unordered_map<Player*, bool> playerSign;//玩家在线
 static map<unsigned, bool> fids;//表单ID
 static map<string, string> command;//注册命令
-unsigned short runningCommandCount = 0;//正在执行的命令数
 static Scoreboard* scoreboard;//储存计分板名称
 #pragma endregion
 #pragma region 函数定义
@@ -76,8 +75,7 @@ void init() {
 	_findclose(handle);
 }
 // UTF-8 转 GBK
-static string UTF8ToGBK(const char* strUTF8)
-{
+static string UTF8ToGBK(const char* strUTF8) {
 	int len = MultiByteToWideChar(CP_UTF8, 0, strUTF8, -1, NULL, 0);
 	wchar_t* wszGBK = new wchar_t[len + 1];
 	memset(wszGBK, 0, len * 2 + 2);
@@ -92,8 +90,7 @@ static string UTF8ToGBK(const char* strUTF8)
 	return strTemp;
 }
 // GBK 转 UTF-8
-static string GBKToUTF8(const char* strGBK)
-{
+static string GBKToUTF8(const char* strGBK) {
 	string strOutUTF8 = "";
 	WCHAR* str1;
 	int n = MultiByteToWideChar(CP_ACP, 0, strGBK, -1, NULL, 0);
@@ -114,20 +111,15 @@ static void delay(int time, PyObject* func) {
 	Sleep(time);
 	if (PyCallable_Check(func))
 		PyObject_CallFunction(func, 0);
-	Py_DECREF(func);
+	else
+		Py_DECREF(func);
 }
 // 执行后端指令
 static bool runcmd(string cmd) {
-	if (p_spscqueue != 0) {
-		if (p_level) {
-			auto fr = [cmd]() {
-				SYMCALL(bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@AEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
-					p_spscqueue, cmd);
-			};
-			runningCommandCount++;
-			safeTick(fr);
-			return true;
-		}
+	if (cmd_queue) {
+		SYMCALL(bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@AEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
+			cmd_queue, cmd);
+		return true;
 	}
 	return false;
 }
@@ -140,6 +132,11 @@ static unsigned getFormId() {
 	fids[id] = true;
 	return id;
 }
+// 创建数据包
+static inline void cPacket(VA tpk,int p) {
+	SYMCALL(VA, "?createPacket@MinecraftPackets@@SA?AV?$shared_ptr@VPacket@@@std@@W4MinecraftPacketIds@@@Z",
+		&tpk, p);
+}
 // 放弃一个表单
 static bool releaseForm(unsigned fid)
 {
@@ -150,32 +147,25 @@ static bool releaseForm(unsigned fid)
 	return false;
 }
 // 发送一个表单数据包
-static unsigned sendForm(string uuid, string str)
-{
+static unsigned sendForm(string uuid, string str) {
 	unsigned fid = getFormId();
-	// 此处自主创建包
-	auto fr = [uuid, fid, str]() {
-		Player* p = onlinePlayers[uuid];
-		if (playerSign[p]) {
-			VA tpk;//ModalFormRequestPacket
-			SYMCALL(VA, "?createPacket@MinecraftPackets@@SA?AV?$shared_ptr@VPacket@@@std@@W4MinecraftPacketIds@@@Z",
-				&tpk, 100);
-			*(VA*)(tpk + 40) = fid;
-			*(string*)(tpk + 48) = str;
-			p->sendPacket(tpk);
-		}
-	};
-	safeTick(fr);
+	Player* p = onlinePlayers[uuid];
+	if (playerSign[p]) {
+		VA tpk;//ModalFormRequestPacket
+		cPacket(tpk, 100);
+		*(VA*)(tpk + 40) = fid;
+		*(string*)(tpk + 48) = str;
+		p->sendPacket(tpk);
+	}
 	return fid;
-}// 发送一个表单数据包
+}
 // 跨服传送
 static bool transferServer(string uuid, string address, int port)
 {
 	Player* p = onlinePlayers[uuid];
 	if (playerSign[p]) {
 		VA tpk;//TransferPacket
-		SYMCALL(VA, "?createPacket@MinecraftPackets@@SA?AV?$shared_ptr@VPacket@@@std@@W4MinecraftPacketIds@@@Z",
-			&tpk, 85);
+		cPacket(tpk, 85);
 		*(string*)(tpk + 40) = address;
 		*(VA*)(tpk + 72) = port;
 		p->sendPacket(tpk);
@@ -201,56 +191,32 @@ static int getscoreboard(Player* p, string objname) {
 	return scores->getCount();
 }
 // 模拟玩家发送消息
-static bool talkAs(string uuid, const char* msg) {
+static bool talkAs(string uuid, string msg) {
 	Player* p = onlinePlayers[uuid];
-	if (playerSign[p]) {	// IDA ServerNetworkHandler::handle, https://github.com/NiclasOlofsson/MiNET/blob/master/src/MiNET/MiNET/Net/MCPE%20Protocol%20Documentation.md
-		string txt = GBKToUTF8(msg);
-		auto fr = [uuid, txt]() {
-			Player* p = onlinePlayers[uuid];
-			if (playerSign[p]) {
-				string n = p->getNameTag();
-				VA nid = p->getNetId();
-				VA tpk;
-				//TextPacket sec;
-				SYMCALL(VA, "?createPacket@MinecraftPackets@@SA?AV?$shared_ptr@VPacket@@@std@@W4MinecraftPacketIds@@@Z",
-					&tpk, 9);
-				*(char*)(tpk + 40) = 1;
-				memcpy((void*)(tpk + 48), &n, sizeof(n));
-				memcpy((void*)(tpk + 80), &txt, sizeof(txt));
-				SYMCALL(VA, "handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVTextPacket@@@Z",
-					p_ServerNetworkHandle, nid, tpk);
-			}
-		};
-		safeTick(fr);
+	if (playerSign[p]) {	// IDA ServerNetworkHandler::handle
+		VA tpk;//TextPacket
+		cPacket(tpk, 9);
+		*(char*)(tpk + 40) = 1;
+		*(string*)(tpk + 48) = p->getNameTag();
+		*(string*)(tpk + 80) = msg;
+		p->sendPacket(tpk);
 		return true;
 	}
 	return false;
 }
 // 模拟玩家执行命令
-static bool runcmdAs(string uuid, const char* cmd) {
+static bool runcmdAs(string uuid, string cmd) {
 	Player* p = onlinePlayers[uuid];
 	if (playerSign[p]) {
-		string scmd = GBKToUTF8(cmd);
-		auto fr = [uuid, scmd]() {
-			Player* p = onlinePlayers[uuid];
-			if (playerSign[p]) {
-				VA nid = p->getNetId();
-				VA tpk;
-				//CommandRequestPacket src;
-				SYMCALL(VA, "?createPacket@MinecraftPackets@@SA?AV?$shared_ptr@VPacket@@@std@@W4MinecraftPacketIds@@@Z",
-					&tpk, 76);
-				memcpy((void*)(tpk + 40), &scmd, sizeof(scmd));
-				SYMCALL(VA, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVCommandRequestPacket@@@Z",
-					p_ServerNetworkHandle, nid, tpk);
-			}
-		};
-		safeTick(fr);
+		VA tpk;//CommandRequestPacket
+		cPacket(tpk, 76);
+		*(string*)(tpk + 40) = cmd;
 		return true;
 	}
 	return false;
 }
 // 判断指针是否为玩家列表中指针
-inline bool checkIsPlayer(void* p) {
+static inline bool checkIsPlayer(void* p) {
 	return playerSign[(Player*)p];
 }
 #pragma endregion
@@ -265,7 +231,7 @@ static PyObject* api_logout(PyObject* self, PyObject* args) {
 }
 // 执行指令
 static PyObject* api_runCmd(PyObject* self, PyObject* args) {
-	const char* cmd = 0;
+	const char* cmd;
 	if (PyArg_ParseTuple(args, "s", &cmd))
 		runcmd(cmd);
 	return Py_None;
@@ -285,7 +251,7 @@ static PyObject* api_getOnLinePlayers(PyObject* self, PyObject* args) {
 	for (auto& op : playerSign) {
 		Player* p = op.first;
 		if (op.second) {
-			PyDict_SetItemString(ret, p->getNameTag().c_str(), Py_BuildValue("[s,s]", p->getUuid()->toString().c_str(), p->getXuid(p_level).c_str()));
+			PyDict_SetItemString(ret, p->getNameTag().c_str(), Py_BuildValue("[s,s]", p->getUuid()->toString().c_str(), p->getXuid(level).c_str()));
 		}
 	}
 	thread(delay, 1, ret).detach();
@@ -472,7 +438,7 @@ static PyObject* api_teleport(PyObject* self, PyObject* args) {
 	const char* pn; float x, y, z; int did;
 	if (PyArg_ParseTuple(args, "sfffi", &pn, &x, &y, &z, &did)) {
 		Player* p = onlinePlayers[pn];
-		pr(u8"无效的函数:teleport");//p->setPosition(x,y,z);
+		p->teleport({ x,y,z }, did);
 	}
 	return Py_None;
 }
@@ -512,30 +478,42 @@ static PyObject* PyInit_mc() {
 // 获取指令队列
 THook(VA, "??0?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@QEAA@_K@Z",
 	VA _this) {
-	p_spscqueue = original(_this);
-	return p_spscqueue;
+	cmd_queue = original(_this);
+	return cmd_queue;
 }
 // 获取地图初始化信息
 THook(VA, "??0Level@@QEAA@AEBV?$not_null@V?$NonOwnerPointer@VSoundPlayerInterface@@@Bedrock@@@gsl@@V?$unique_ptr@VLevelStorage@@U?$default_delete@VLevelStorage@@@std@@@std@@V?$unique_ptr@VLevelLooseFileStorage@@U?$default_delete@VLevelLooseFileStorage@@@std@@@4@AEAVIMinecraftEventing@@_NEAEAVScheduler@@AEAVStructureManager@@AEAVResourcePackManager@@AEAVIEntityRegistryOwner@@V?$unique_ptr@VBlockComponentFactory@@U?$default_delete@VBlockComponentFactory@@@std@@@4@V?$unique_ptr@VBlockDefinitionGroup@@U?$default_delete@VBlockDefinitionGroup@@@std@@@4@@Z",
 	VA a1, VA a2, VA a3, VA a4, VA a5, VA a6, VA a7, VA a8, VA a9, VA a10, VA a11, VA a12, VA a13) {
-	VA level = original(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13);
-	p_level = level;
+	level = original(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13);
 	return level;
 }
 // 获取游戏初始化时基本信息
 THook(VA, "??0GameSession@@QEAA@AEAVNetworkHandler@@V?$unique_ptr@VServerNetworkHandler@@U?$default_delete@VServerNetworkHandler@@@std@@@std@@AEAVLoopbackPacketSender@@V?$unique_ptr@VNetEventCallback@@U?$default_delete@VNetEventCallback@@@std@@@3@V?$unique_ptr@VLevel@@U?$default_delete@VLevel@@@std@@@3@E@Z",
 	void* a1, void* a2, VA* a3, void* a4, void* a5, void* a6, void* a7) {
-	p_ServerNetworkHandle = *a3;
+	server_network_handle = *a3;
 	return original(a1, a2, a3, a4, a5, a6, a7);
 }
 // 服务器后台指令输出
 THook(VA, "??$_Insert_string@DU?$char_traits@D@std@@_K@std@@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@0@AEAV10@QEBD_K@Z",
 	VA handle, char* str, VA size) {
 	if (handle == STD_COUT_HANDLE) {
-		CallAll("ServerCmdOutput", "{s:s}", "msg", str);
+		CallAll("ServerCmdOutput", "s", str);
 		RET(handle, str, size);
 	}
 	return original(handle, str, size);
+}
+// 控制台输入
+THook(bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@AEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
+	VA _this, string* cmd) {
+	if (*cmd == "pyreload") {
+		if (!Py_FinalizeEx()) {
+			funcs.clear();
+			init();
+			return false;
+		}
+	}
+	CallAll("ServerCmd", "{s:s}", "cmd", *cmd);
+	RET(_this, cmd);
 }
 // 玩家加载名字
 THook(VA, "?onPlayerJoined@ServerScoreboard@@UEAAXAEBVPlayer@@@Z",
@@ -543,7 +521,7 @@ THook(VA, "?onPlayerJoined@ServerScoreboard@@UEAAXAEBVPlayer@@@Z",
 	string uuid = p->getUuid()->toString();
 	onlinePlayers[uuid] = p;
 	playerSign[p] = true;
-	getPlayerInfo(p);
+	getPlayerInfo(p); pr(pp->y);
 	CallAll("LoadName", "{s:s,s:[f,f,f],s:i,s:i,s:s}",
 		"playername", pn,
 		"XYZ", pp->x, pp->y, pp->z,
@@ -659,24 +637,6 @@ THook(bool, "?_destroyBlockInternal@GameMode@@AEAA_NAEBVBlockPos@@E@Z",
 		"isstand", st
 	);
 	RET(_this, bp);
-}
-// 控制台输入
-THook(bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@AEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
-	VA _this, string* cmd) {
-	if (*cmd == "pyreload") {
-		if (!Py_FinalizeEx()) {
-			funcs.clear();
-			init();
-			return false;
-		}
-	}
-	// 插件指令不触发
-	if (runningCommandCount > 0) {
-		runningCommandCount--;
-		return original(_this, cmd);
-	}
-	CallAll("ServerCmd", "{s:s}", "cmd", *cmd);
-	RET(_this, cmd);
 }
 // 玩家开箱准备
 THook(bool, "?use@ChestBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@@Z",
@@ -803,8 +763,6 @@ THook(void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormResponsePacket@
 // 玩家攻击
 THook(bool, "?attack@Player@@UEAA_NAEAVActor@@@Z",
 	Player* p, Actor* a) {
-	Vec3 v{ 100,80,90 };
-	//SYMCALL(bool, "?teleportTo@Player@@UEAAXAEBVVec3@@_NHHAEBUActorUniqueID@@@Z", p, v, 1, 3, 1);
 	string an = a->getNameTag();
 	string atn = a->getTypeName();
 	float hm, h;
@@ -876,7 +834,8 @@ THook(void, "?die@Mob@@UEAAXAEBVActorDamageSource@@@Z",
 	PyDict_SetItemString(args, "srctype", Py_BuildValue("s", sr_type.c_str()));
 	PyDict_SetItemString(args, "dmcase", Py_BuildValue("i", *((unsigned*)dmsg + 2)));
 	CallAll("MobDie", "O", args);
-	if (ret) original(_this, dmsg);
+	Py_DECREF(args);
+	if (bar) original(_this, dmsg);
 }
 // 生物受伤
 THook(bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
@@ -918,6 +877,7 @@ THook(bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
 	PyDict_SetItemString(args, "srctype", Py_BuildValue("s", sr_type.c_str()));
 	PyDict_SetItemString(args, "dmcase", Py_BuildValue("i", *((unsigned*)dmsg + 2)));
 	CallAll("MobHurt", "O", args);
+	Py_DECREF(args);
 	RET(_this, dmsg, a3, a4, a5);
 }
 // 玩家重生
@@ -991,11 +951,5 @@ THook(void*, "??0ServerScoreboard@@QEAA@VCommandSoftEnumRegistry@@PEAVLevelStora
 	void* _this, void* a2, void* a3) {
 	scoreboard = (Scoreboard*)original(_this, a2, a3);
 	return scoreboard;
-}
-// 测试切换纬度
-THook(void, "?requestPlayerChangeDimension@Level@@QEAAXAEAVPlayer@@V?$unique_ptr@VChangeDimensionRequest@@U?$default_delete@VChangeDimensionRequest@@@std@@@std@@@Z",
-	Level* l, VA a1, VA a2) {
-	pr(a1); pr(a2);
-	original(l, a1, a2);
 }
 #pragma endregion

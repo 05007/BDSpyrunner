@@ -1,10 +1,4 @@
-// 函数名：log
-// 功能：标准输出流打印消息
-// 参数个数：1个
-// 参数类型：字符串
-// 参数详解：待输出至标准流字符串
-[例] mc.log('你好 js')
-
+注:函数名后加了***的表示功能无效且属于预期功能
 // 函数名：logout
 // 功能：发送一条命令输出消息（可被拦截）
 // 参数个数：1个
@@ -21,7 +15,7 @@
 [例] mc.setCommandDescribe('testcase', '这是一个测试用例指令说明')
 
 // 函数名：setListener
-// 功能：注册玩家事件加载前监听器
+// 功能：注册玩家事件加载前监听器(必须在加载世界前注册)
 // 参数个数：2个
 // 参数类型：整数，函数对象
 // 参数详解：key - 注册用关键字，func - 供事件触发时的回调函数对象
@@ -33,7 +27,7 @@
 // 参数类型：字符串
 // 参数详解：cmd - 语法正确的MC指令
 // 返回值：是否正常执行
-[例] mc.runcmd('me 你好 js')
+[例] mc.runcmd('me 你好')
 
 // 函数名：getOnLinePlayers
 // 功能：获取在线玩家列表
@@ -41,7 +35,7 @@
 // 返回值：玩家列表的字典
 [例] mc.getOnLinePlayers()
 
-// 函数名：getStructure
+// 函数名：getStructure***
 // 功能：获取一个结构
 // 参数个数：5个
 // 参数类型：整型，字符串，字符串，布尔型，布尔型
@@ -49,7 +43,7 @@
 // 返回值：结构json字符串
 [例] mc.getStructure(0, '{"x":0, "y":4, "z":0}', '{"x":10, "y":14, "z":10}', false, true)
 
-// 函数名：setStructure
+// 函数名：setStructure***
 // 功能：设置一个结构到指定位置
 // 参数个数：6个
 // 参数类型：字符串，整型，字符串，整型，布尔型，布尔型
@@ -64,9 +58,9 @@
 // 参数详解：uuid - 在线玩家的uuid字符串，newName - 新的名称
 // 返回值：是否命名成功
 // （备注：该函数可能不会变更客户端实际显示名）
-[例] mc.reName('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', '请叫我LiuXiaohua')
+[例] mc.reName('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', '名字')
 
-// 函数名：getPlayerAbilities
+// 函数名：getPlayerAbilities***
 // 功能：获取玩家能力表
 // 参数个数：1个
 // 参数类型：字符串
@@ -74,7 +68,7 @@
 // 返回值：能力json字符串
 [例] let a = getPlayerAbilities('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9')
 
-// 函数名：setPlayerAbilities
+// 函数名：setPlayerAbilities***
 // 功能：设置玩家能力表
 // 参数个数：2个
 // 参数类型：字符串，字符串
@@ -83,7 +77,7 @@
 // （备注：该函数可能不会变更客户端实际显示能力）
 [例] mc.setPlayerAbilities('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', '{"opencontainers": false}')
 
-// 函数名：getPlayerAttributes
+// 函数名：getPlayerAttributes***
 // 功能：获取玩家属性表
 // 参数个数：1个
 // 参数类型：字符串
@@ -91,7 +85,7 @@
 // 返回值：属性json字符串
 [例] mc.getPlayerAttributes('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9')
 
-// 函数名：setPlayerAttributes
+// 函数名：setPlayerAttributes***
 // 功能：设置玩家属性默认值表
 // 参数个数：2个
 // 参数类型：字符串，字符串
@@ -100,7 +94,7 @@
 // （备注：该函数可能不会变更客户端实际显示值；该函数可能导致玩家死后重生不会恢复初始属性）
 [例] mc.setPlayerAttributes('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', '{"attack_damage": 9999}')
 
-// 函数名：setPlayerTempAttributes
+// 函数名：setPlayerTempAttributes***
 // 功能：设置玩家属性临时值表
 // 参数个数：2个
 // 参数类型：字符串，字符串
@@ -109,7 +103,7 @@
 // （备注：该函数可能不会变更客户端实际显示值）
 [例] mc.setPlayerTempAttributes('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', '{"hunger": 10}')
 
-// 函数名：getPlayerMaxAttributes
+// 函数名：getPlayerMaxAttributes***
 // 功能：获取玩家属性上限值表
 // 参数个数：1个
 // 参数类型：字符串
@@ -117,7 +111,7 @@
 // 返回值：属性上限值json字符串
 [例] let m = getPlayerMaxAttributes('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9')
 
-// 函数名：setPlayerMaxAttributes
+// 函数名：setPlayerMaxAttributes***
 // 功能：设置玩家属性上限值表
 // 参数个数：2个
 // 参数类型：字符串，字符串
@@ -126,7 +120,7 @@
 // （备注：该函数可能不会变更客户端实际显示值）
 [例] mc.setPlayerMaxAttributes('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', '{"maxhealth": 200}')
 
-// 函数名：getPlayerItems
+// 函数名：getPlayerItems***
 // 功能：获取玩家所有物品列表
 // 参数个数：1个
 // 参数类型：字符串
@@ -142,7 +136,7 @@
 // 返回值：当前选中项信息json字符串
 [例] let i = getPlayerSelectedItem('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9')
 
-// 函数名：setPlayerItems
+// 函数名：setPlayerItems***
 // 功能：设置玩家所有物品列表
 // 参数个数：2个
 // 参数类型：字符串，字符串
@@ -151,7 +145,7 @@
 // （备注：特定条件下可能不会变更游戏内实际物品）
 [例] mc.setPlayerItems('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9','{"Offhand":{"tt":9,"tv":[{"tt":10,"tv":[{"ck":"Count","cv":{"tt":1,"tv":1}},{"ck":"Damage","cv":{"tt":2,"tv":0}},{"ck":"Name","cv":{"tt":8,"tv":"minecraft:trident"}},{"ck":"tag","cv":{"tt":10,"tv":[{"ck":"ench","cv":{"tt":9,"tv":[{"tt":10,"tv":[{"ck":"id","cv":{"tt":2,"tv":7}},{"ck":"lvl","cv":{"tt":2,"tv":8888}}]}]}}]}}]}]}}')
 
-// 函数名：addPlayerItemEx
+// 函数名：addPlayerItemEx***
 // 功能：增加玩家一个物品
 // 参数个数：2个
 // 参数类型：字符串，字符串
@@ -160,7 +154,7 @@
 // （备注：特定条件下可能不会变更游戏内实际物品）
 [例] mc.setPlayerItems('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', '{"tt":10,"tv":[{"ck":"Count","cv":{"tt":1,"tv":1}},{"ck":"Damage","cv":{"tt":2,"tv":0}},{"ck":"Name","cv":{"tt":8,"tv":"minecraft:trident"}},{"ck":"tag","cv":{"tt":10,"tv":[{"ck":"ench","cv":{"tt":9,"tv":[{"tt":10,"tv":[{"ck":"id","cv":{"tt":2,"tv":10}},{"ck":"lvl","cv":{"tt":2,"tv":9999}}]}]}}]}}]}')
 
-// 函数名：addPlayerItem
+// 函数名：addPlayerItem***
 // 功能：增加玩家一个物品
 // 参数个数：4个
 // 参数类型：字符串
@@ -169,7 +163,7 @@
 // （备注：特定条件下可能不会变更游戏内实际物品）
 [例] mc.addPlayerItem('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', 9, 0, 32)
 
-// 函数名：getPlayerEffects
+// 函数名：getPlayerEffects***
 // 功能：获取玩家所有效果列表
 // 参数个数：1个
 // 参数类型：字符串
@@ -177,7 +171,7 @@
 // 返回值：效果列表json字符串
 [例] let e = getPlayerEffects('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9')
 
-// 函数名：setPlayerEffects
+// 函数名：setPlayerEffects***
 // 功能：设置玩家所有效果列表
 // 参数个数：2个
 // 参数类型：字符串，字符串
@@ -185,7 +179,7 @@
 // 返回值：是否设置成功
 [例] mc.setPlayerEffects('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', '{"tt":9,"tv":[{"tt":10,"tv":[{"ck":"Ambient","cv":{"tt":1,"tv":0}},{"ck":"Amplifier","cv":{"tt":1,"tv":0}},{"ck":"DisplayOnScreenTextureAnimation","cv":{"tt":1,"tv":0}},{"ck":"Duration","cv":{"tt":3,"tv":3461}},{"ck":"DurationEasy","cv":{"tt":3,"tv":3461}},{"ck":"DurationHard","cv":{"tt":3,"tv":3461}},{"ck":"DurationNormal","cv":{"tt":3,"tv":3461}},{"ck":"Id","cv":{"tt":1,"tv":16}},{"ck":"ShowParticles","cv":{"tt":1,"tv":1}}]}]}')
 
-// 函数名：setPlayerBossBar
+// 函数名：setPlayerBossBar***
 // 功能：设置玩家自定义血条
 // 参数个数：3个
 // 参数类型：字符串，字符串，浮点型
@@ -193,7 +187,7 @@
 // 返回值：是否设置成功
 [例] mc.setPlayerBossBar('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', '欢迎来到梦之故里', 1.00)
 
-// 函数名：removePlayerBossBar
+// 函数名：removePlayerBossBar***
 // 功能：清除玩家自定义血条
 // 参数个数：1个
 // 参数类型：字符串
@@ -201,7 +195,7 @@
 // 返回值：是否清除成功
 [例] mc.removePlayerBossBar('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9')
 
-// 函数名：setPlayerSidebar
+// 函数名：setPlayerSidebar***
 // 功能：设置玩家自定义侧边栏临时计分板
 // 参数个数：3个
 // 参数类型：字符串，字符串，字符串
@@ -210,7 +204,7 @@
 // （注：列表总是从第1行开始，总计不超过15行）
 [例] mc.setPlayerSidebar('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', '自定义侧边栏', '["第一行", "第二行", "我在哪行?    "]')
 
-// 函数名：removePlayerSidebar
+// 函数名：removePlayerSidebar***
 // 功能：清除玩家自定义侧边栏
 // 参数个数：1个
 // 参数类型：字符串
@@ -218,7 +212,7 @@
 // 返回值：是否清除成功
 [例] mc.removePlayerSidebar('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9')
 
-// 函数名：getPlayerPermissionAndGametype
+// 函数名：getPlayerPermissionAndGametype***
 // 功能：获取玩家权限与游戏模式
 // 参数个数：1个
 // 参数类型：字符串
@@ -226,7 +220,7 @@
 // 返回值：权限与模式的json字符串
 [例] mc.getPlayerPermissionAndGametype('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9')
 
-// 函数名：setPlayerPermissionAndGametype
+// 函数名：setPlayerPermissionAndGametype***
 // 功能：设置玩家权限与游戏模式
 // 参数个数：2个
 // 参数类型：字符串，字符串
@@ -235,13 +229,13 @@
 // （备注：特定条件下可能不会变更游戏内实际能力）
 [例] mc.setPlayerPermissionAndGametype('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', '{"gametype" : 3}')
 
-// 函数名：selectPlayer
+// 函数名：getPlayerInfo
 // 功能：查询在线玩家基本信息
 // 参数个数：1个
 // 参数类型：字符串
 // 参数详解：uuid - 在线玩家的uuid字符串
-// 返回值：玩家基本信息json字符串
-[例] let e = selectPlayer('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9')
+// 返回值：玩家基本信息字典
+[例] mc.getPlayerInfo('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9')
 
 // 函数名：transferserver
 // 功能：传送玩家至指定服务器
@@ -255,7 +249,7 @@
 // 功能：传送玩家至指定坐标和维度
 // 参数个数：5个
 // 参数类型：字符串，浮点型，浮点型，浮点型，整型
-// 参数详解：uuid - 在线玩家的uuid字符串，X - x，Y - y，Z - z，dimensionid - 维度ID
+// 参数详解：uuid - 在线玩家的uu*d字符串，X - x，Y - y，Z - z，dimensionid - 维度ID
 // 返回值：是否传送成功
 [例] mc.teleport('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', 10, 99, 10, 2)
 
@@ -265,7 +259,7 @@
 // 参数类型：字符串，字符串
 // 参数详解：uuid - 在线玩家的uuid字符串，msg - 待模拟发送的文本
 // 返回值：是否发送成功
-[例] mc.talkAs('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', '你好 js')
+[例] mc.talkAs('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', '针不戳')
 
 // 函数名：runcmdAs
 // 功能：模拟玩家执行一个指令
@@ -273,7 +267,7 @@
 // 参数类型：字符串，字符串
 // 参数详解：uuid - 在线玩家的uuid字符串，cmd - 待模拟执行的指令
 // 返回值：是否发送成功
-[例] mc.runcmdAs('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', '/me 你好 js')
+[例] mc.runcmdAs('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', '/me 针不戳')
 
 // 函数名：sendForm
 // 功能：向指定的玩家发送一个自定义表单
@@ -286,6 +280,6 @@
 // 函数名：setTimeout
 // 功能：延时执行一条指令
 // 参数个数：2个
-// 参数类型：字符串/函数，整型
+// 参数类型：函数，整型
 // 参数详解：code - 待延时执行的指令字符串/函数对象，millisec - 延时毫秒数
-[例] setTimeout('log("你好 js")', 1000)
+[例] mc.setTimeout(a, 1000)

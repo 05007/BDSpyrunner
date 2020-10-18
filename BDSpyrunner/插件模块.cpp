@@ -1,6 +1,5 @@
 #include "预编译头.h"
 #include "结构体.hpp"
-#include "tick/tick.h"
 #include <thread>
 using namespace std;
 #pragma warning(disable:4996)
@@ -117,7 +116,7 @@ static void delay(int time, PyObject* func) {
 // 执行后端指令
 static bool runcmd(string cmd) {
 	if (cmd_queue) {
-		SYMCALL(bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@AEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
+		SYMCALL<bool>("??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@AEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
 			cmd_queue, cmd);
 		return true;
 	}
@@ -133,8 +132,8 @@ static unsigned getFormId() {
 	return id;
 }
 // 创建数据包
-static inline void cPacket(VA tpk,int p) {
-	SYMCALL(VA, "?createPacket@MinecraftPackets@@SA?AV?$shared_ptr@VPacket@@@std@@W4MinecraftPacketIds@@@Z",
+static inline void cPacket(VA &tpk,int p) {
+	SYMCALL<VA>("?createPacket@MinecraftPackets@@SA?AV?$shared_ptr@VPacket@@@std@@W4MinecraftPacketIds@@@Z",
 		&tpk, p);
 }
 // 放弃一个表单
@@ -175,7 +174,7 @@ static bool transferServer(string uuid, string address, int port)
 }
 // 命令输出
 static void logout(string str) {
-	SYMCALL(VA, "??$_Insert_string@DU?$char_traits@D@std@@_K@std@@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@0@AEAV10@QEBD_K@Z",
+	SYMCALL<VA>("??$_Insert_string@DU?$char_traits@D@std@@_K@std@@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@0@AEAV10@QEBD_K@Z",
 		STD_COUT_HANDLE, str.c_str(), str.length());
 }
 // 获取玩家计分板分数
@@ -191,12 +190,12 @@ static int getscoreboard(Player* p, string objname) {
 	return scores->getCount();
 }
 // 模拟玩家发送消息
-static bool talkAs(string uuid, string msg) {
+static bool sendText(string uuid, string msg,int mode) {
 	Player* p = onlinePlayers[uuid];
 	if (playerSign[p]) {	// IDA ServerNetworkHandler::handle
 		VA tpk;//TextPacket
 		cPacket(tpk, 9);
-		*(char*)(tpk + 40) = 1;
+		*(char*)(tpk + 40) = mode;
 		*(string*)(tpk + 48) = p->getNameTag();
 		*(string*)(tpk + 80) = msg;
 		p->sendPacket(tpk);
@@ -380,7 +379,7 @@ static PyObject* api_addLevel(PyObject* self, PyObject* args) {
 	if (PyArg_ParseTuple(args, "si", &uuid, &lv)) {
 		Player* pl = onlinePlayers[uuid];
 		if (playerSign[pl]) {
-			SYMCALL(void, "?addLevels@Player@@UEAAXH@Z", pl, lv);
+			SYMCALL<void>("?addLevels@Player@@UEAAXH@Z", pl, lv);
 		}
 	}
 	return Py_None;
@@ -420,7 +419,7 @@ static PyObject* api_talkAs(PyObject* self, PyObject* args) {
 	const char* uuid;
 	const char* msg;
 	if (PyArg_ParseTuple(args, "ss", &uuid, &msg)) {
-		return Py_BuildValue("i", talkAs(uuid, msg));
+		return Py_BuildValue("i", sendText(uuid, msg,1));
 	}
 	return Py_None;
 }
@@ -439,6 +438,15 @@ static PyObject* api_teleport(PyObject* self, PyObject* args) {
 	if (PyArg_ParseTuple(args, "sfffi", &pn, &x, &y, &z, &did)) {
 		Player* p = onlinePlayers[pn];
 		p->teleport({ x,y,z }, did);
+	}
+	return Py_None;
+}
+// 原始输出
+static PyObject* api_tellraw(PyObject* self, PyObject* args) {
+	const char* uuid;
+	const char* msg;
+	if (PyArg_ParseTuple(args, "ss", &uuid, &msg)) {
+		return Py_BuildValue("i", sendText(uuid, msg, 0));
 	}
 	return Py_None;
 }
@@ -462,6 +470,7 @@ static PyMethodDef mcMethods[] = {
 	{"talkAs", api_talkAs, METH_VARARGS,""},
 	{"runcmdAs", api_runcmdAs, METH_VARARGS,""},
 	{"teleport",api_teleport, METH_VARARGS,""},
+	{"tellraw",api_tellraw, METH_VARARGS,""},
 	{NULL,NULL,NULL,NULL}
 };
 // 模块声明
@@ -521,7 +530,7 @@ THook(VA, "?onPlayerJoined@ServerScoreboard@@UEAAXAEBVPlayer@@@Z",
 	string uuid = p->getUuid()->toString();
 	onlinePlayers[uuid] = p;
 	playerSign[p] = true;
-	getPlayerInfo(p); pr(pp->y);
+	getPlayerInfo(p);
 	CallAll("LoadName", "{s:s,s:[f,f,f],s:i,s:i,s:s}",
 		"playername", pn,
 		"XYZ", pp->x, pp->y, pp->z,
@@ -581,21 +590,6 @@ THook(bool, "?useItemOn@GameMode@@UEAA_NAEAVItemStack@@AEBVBlockPos@@EAEBVVec3@@
 	);
 	RET(_this, item, bp, a4, v5, b);
 }
-// 物品
-THook(bool, "?useOn@ItemStack@@QEAA_NAEAVActor@@HHHEMMM@Z",
-	ItemStack* is, Actor* p, int a3, int a4, int a5, int a6, float a7, float a8, float a9) {
-	getPlayerInfo(p);
-	CallAll("UseItem", "{s:s,s:[f,f,f],s:i,s:i,s:i,s:s,s:i}",
-		"playername", pn,
-		"XYZ", pp->x, pp->y, pp->z,
-		"dimensionid", did,
-		"itemid", is->getId(),
-		"itemaux", is->getAuxValue(),
-		"itemname", is->getName().c_str(),
-		"isstand", st
-	);
-	RET(is, p, a3, a4, a5, a6, a7, a8, a9);
-}
 // 玩家放置方块
 THook(bool, "?mayPlace@BlockSource@@QEAA_NAEBVBlock@@AEBVBlockPos@@EPEAVActor@@_N@Z",
 	BlockSource* _this, Block* b, BlockPos* bp, unsigned __int8 a4, struct Actor* p, bool _bool) {
@@ -604,7 +598,7 @@ THook(bool, "?mayPlace@BlockSource@@QEAA_NAEBVBlock@@AEBVBlockPos@@EPEAVActor@@_
 		short bid = bl->getBlockItemID();
 		string bn = bl->getBlockName();
 		getPlayerInfo(p);
-		CallAll("PlacedBlock", "{s:s,s:[f,f,f],s:i,s:s,s:i,s:[i,i,i],s:i}",
+		CallAll("PlacedBlock", "{s:s,s:[f,i,f],s:i,s:s,s:i,s:[i,i,i],s:i}",
 			"playername", pn.c_str(),
 			"XYZ", pp->x, pp->y, pp->z,
 			"dimensionid", did,
@@ -701,7 +695,7 @@ THook(void, "?stopOpen@BarrelBlockActor@@UEAAXAEAVPlayer@@@Z",
 // 玩家放入取出
 THook(void, "?containerContentChanged@LevelContainerModel@@UEAAXH@Z",
 	LevelContainerModel* a1, VA slot) {
-	VA v3 = *((VA*)a1 + 26);				// IDA LevelContainerModel::_getContainer
+	VA v3 = *((VA*)a1 + 26);	// IDA LevelContainerModel::_getContainer
 	BlockSource* bs = *(BlockSource**)(*(VA*)(v3 + 808) + 72);
 	BlockPos* bp = (BlockPos*)((char*)a1 + 216);
 	Block* b = bs->getBlock(bp);
@@ -740,7 +734,7 @@ THook(void, "?containerContentChanged@LevelContainerModel@@UEAAXH@Z",
 THook(void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormResponsePacket@@$0A@@@UEBAXAEBVNetworkIdentifier@@AEAVNetEventCallback@@AEAV?$shared_ptr@VPacket@@@std@@@Z",
 	VA _this, VA id, VA handle, ModalFormResponsePacket** fp) {
 	ModalFormResponsePacket* fmp = *fp;
-	Player* p = SYMCALL(Player*, "?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
+	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
 		handle, id, *(char*)((VA)fmp + 16));
 	if (p) {
 		unsigned fid = fmp->getFormId();
@@ -803,20 +797,20 @@ THook(void, "?die@Mob@@UEAAXAEBVActorDamageSource@@@Z",
 	VA v1 = (VA)dmsg;
 	VA v7 = *((VA*)(v0 + 816));
 	VA* srActid = (VA*)(*(VA(__fastcall**)(VA, char*))(*(VA*)v1 + 64))(v1, &v72);
-	Actor* SrAct = SYMCALL(Actor*, "?fetchEntity@Level@@QEBAPEAVActor@@UActorUniqueID@@_N@Z",
+	Actor* SrAct = SYMCALL<Actor*>("?fetchEntity@Level@@QEBAPEAVActor@@UActorUniqueID@@_N@Z",
 		v7, *srActid, 0);
 	string sr_name = "";
 	string sr_type = "";
 	if (SrAct) {
 		sr_name = SrAct->getNameTag();
 		int srtype = checkIsPlayer(SrAct) ? 319 : SrAct->getEntityTypeId();
-		SYMCALL(string&, "?EntityTypeToLocString@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@W4ActorType@@W4ActorTypeNamespaceRules@@@Z",
+		SYMCALL<string&>("?EntityTypeToLocString@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@W4ActorType@@W4ActorTypeNamespaceRules@@@Z",
 			&sr_type, srtype);
 	}
 	if (checkIsPlayer(_this)) {
 		getPlayerInfo(((Player*)_this));
 		string pt;
-		SYMCALL(string&, "?EntityTypeToLocString@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@W4ActorType@@W4ActorTypeNamespaceRules@@@Z",
+		SYMCALL<string&>("?EntityTypeToLocString@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@W4ActorType@@W4ActorTypeNamespaceRules@@@Z",
 			&pt, 319);
 		PyDict_SetItemString(args, "playername", Py_BuildValue("s", pn));
 		PyDict_SetItemString(args, "isstand", Py_BuildValue("i", st));
@@ -846,20 +840,20 @@ THook(bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
 	VA v1 = (VA)dmsg;
 	VA v7 = *((VA*)(v0 + 816));
 	VA* srActid = (VA*)(*(VA(__fastcall**)(VA, char*))(*(VA*)v1 + 64))(v1, &v72);
-	Actor* SrAct = SYMCALL(Actor*, "?fetchEntity@Level@@QEBAPEAVActor@@UActorUniqueID@@_N@Z",
+	Actor* SrAct = SYMCALL<Actor*>("?fetchEntity@Level@@QEBAPEAVActor@@UActorUniqueID@@_N@Z",
 		v7, *srActid, 0);
 	string sr_name = "";
 	string sr_type = "";
 	if (SrAct) {
 		sr_name = SrAct->getNameTag();
 		int srtype = checkIsPlayer(SrAct) ? 319 : SrAct->getEntityTypeId();
-		SYMCALL(string&, "?EntityTypeToLocString@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@W4ActorType@@W4ActorTypeNamespaceRules@@@Z",
+		SYMCALL<string&>("?EntityTypeToLocString@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@W4ActorType@@W4ActorTypeNamespaceRules@@@Z",
 			&sr_type, srtype);
 	}
 	if (checkIsPlayer(_this)) {
 		getPlayerInfo(((Player*)_this));
 		string pt;
-		SYMCALL(string&, "?EntityTypeToLocString@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@W4ActorType@@W4ActorTypeNamespaceRules@@@Z",
+		SYMCALL<string&>("?EntityTypeToLocString@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@W4ActorType@@W4ActorTypeNamespaceRules@@@Z",
 			&pt, 319);
 		PyDict_SetItemString(args, "playername", Py_BuildValue("s", pn));
 		PyDict_SetItemString(args, "isstand", Py_BuildValue("i", st));
@@ -898,7 +892,7 @@ THook(void, "?fireEventPlayerMessage@MinecraftEventing@@AEAAXAEBV?$basic_string@
 	CallAll("Chat", "{s:s,s:s,s:s,s:s}",
 		"sender", sender,
 		"target", target,
-		"msg", GBKToUTF8(msg.c_str()),
+		"msg", msg,
 		"style", style
 	);
 	original(_this, sender, target, msg, style);
@@ -906,7 +900,7 @@ THook(void, "?fireEventPlayerMessage@MinecraftEventing@@AEAAXAEBV?$basic_string@
 // 玩家输入文本
 THook(void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVTextPacket@@@Z",
 	VA _this, VA id, TextPacket* tp) {
-	Player* p = SYMCALL(Player*, "?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
+	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
 		_this, id, *((char*)tp + 16));
 	if (p) {
 		getPlayerInfo(p);
@@ -914,7 +908,7 @@ THook(void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVTextP
 			"playername", pn,
 			"XYZ", pp->x, pp->y, pp->z,
 			"dimensionid", did,
-			"msg", GBKToUTF8(tp->toString().c_str()),
+			"msg", tp->toString().c_str(),
 			"isstand", st
 		);
 	}
@@ -923,7 +917,7 @@ THook(void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVTextP
 // 玩家输入指令
 THook(void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVCommandRequestPacket@@@Z",
 	VA _this, VA id, CommandRequestPacket* crp) {
-	Player* p = SYMCALL(Player*, "?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
+	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
 		_this, id, *((char*)crp + 16));
 	if (p) {
 		getPlayerInfo(p);
@@ -931,7 +925,7 @@ THook(void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVComma
 			"playername", pn,
 			"XYZ", pp->x, pp->y, pp->z,
 			"dimensionid", did,
-			"cmd", GBKToUTF8(crp->toString().c_str()),
+			"cmd", crp->toString(),
 			"isstand", st
 		);
 	}
@@ -941,7 +935,7 @@ THook(void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVComma
 THook(void, "?setup@ChangeSettingCommand@@SAXAEAVCommandRegistry@@@Z",
 	void* _this) {
 	for (auto& cmd : command) {
-		SYMCALL(void, "?registerCommand@CommandRegistry@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PEBDW4CommandPermissionLevel@@UCommandFlag@@3@Z",
+		SYMCALL<void>("?registerCommand@CommandRegistry@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PEBDW4CommandPermissionLevel@@UCommandFlag@@3@Z",
 			_this, cmd.first.c_str(), cmd.second.c_str(), 0, 0, 64);
 	}
 	original(_this);

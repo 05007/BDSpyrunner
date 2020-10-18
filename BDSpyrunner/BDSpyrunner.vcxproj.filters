@@ -5,9 +5,6 @@
     <ClCompile Include="预编译头.cpp">
       <Filter>其它文件</Filter>
     </ClCompile>
-    <ClCompile Include="tick\tick.cpp">
-      <Filter>其它文件</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="结构体.hpp" />
@@ -25,6 +22,9 @@
       <Filter>其它文件</Filter>
     </Library>
     <Library Include="python38.lib">
+      <Filter>其它文件</Filter>
+    </Library>
+    <Library Include="jsoncpp.lib">
       <Filter>其它文件</Filter>
     </Library>
   </ItemGroup>

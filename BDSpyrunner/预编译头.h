@@ -1,17 +1,13 @@
 #pragma once
-//----------------------------------
-// 引用头文件
-//----------------------------------
 #define WIN32_LEAN_AND_MEAN
-// Windows 头文件
 #include <windows.h>
-// C++标准库 头文件
 #include <iostream>
 #include <string>
 #include <unordered_map>
 #include <map>
 #include <string>
 #include <string_view>
+// python
 #define PY_SSIZE_T_CLEAN
 #include "include/Python.h"
 extern "C" {
@@ -67,15 +63,11 @@ inline const T& dAccess(void const* ptr, uintptr_t off) {
 #define __WEAK __declspec(selectany)
 
 #define SYM(x) GetServerSymbol(x)
-
-template<typename T_RET, typename... Args>
-T_RET Symcall(const char* fn, Args... args) {
-	using FnType = T_RET(*)(Args...);
-	FnType p = (FnType)SYM(fn);
-	return p(args...);
+// 调用函数
+template<typename ret, typename... Args>
+ret SYMCALL(const char* fn, Args... args) {
+	return ((ret(*)(Args...))SYM(fn))(args...);
 }
-#define SYMCALL(ret, sym, ...) (Symcall<ret>(sym, ##__VA_ARGS__))
-//#define SymCall(ret,fn, ...) ((ret(*)(__VA_ARGS__))(SYM(fn)))
 class THookRegister {
 public:
 	THookRegister(void* address, void* hook, void** org) {
@@ -174,18 +166,3 @@ extern THookRegister THookRegisterTemplate;
 #define TClasslessInstanceHook(ret, sym, ...) TClasslessInstanceHook2(sym, ret, sym, __VA_ARGS__)
 #define TInstanceHook2(iname, ret, sym, type, ...) _TInstanceDefHook(iname, sym, ret, type, __VA_ARGS__)
 #define TInstanceHook(ret, sym, type, ...) TInstanceHook2(sym, ret, sym, type, __VA_ARGS__)
-
-//----------------------------------
-// 其他
-//----------------------------------
-#define REF(PTR)										(&PTR)
-#define DEREF(PTR)										(*PTR)
-#define OBJECT(TYPE, VALUE)								reinterpret_cast<TYPE>(VALUE)
-
-#define POINTER(PTR_TYPE, PTR)							OBJECT(PTR_TYPE, PTR)
-#define POINTER_ADD_OFFSET(TYPE, PTR, OFFSET)			POINTER(TYPE, POINTER(VA, PTR)+OFFSET)
-#define CLASS_OBJECT(TYPE, THISPTR, OFFSET)				DEREF(POINTER_ADD_OFFSET(Ptr<TYPE>, THISPTR, OFFSET))
-#define CLASS_VTABLE_OBJECT(TYPE, THISPTR, OFFSET)		DEREF(POINTER(Ptr<TYPE>, DEREF(POINTER(Ptr<VA>, THISPTR))+OFFSET))
-
-#define SYM_POINT(TYPE, SYM_RVA)						POINTER_ADD_OFFSET(Ptr<TYPE>, GetModuleHandle(NULL), SYM_RVA)
-#define SYM_OBJECT(TYPE, SYM_RVA)						DEREF(POINTER_ADD_OFFSET(Ptr<TYPE>, GetModuleHandle(NULL), SYM_RVA))

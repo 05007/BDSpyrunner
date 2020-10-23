@@ -1,7 +1,10 @@
 #pragma once
 #include "预编译头.h"
 #include "head/Component.h"
-using namespace std;
+#include "head/JsonLoader.h"
+using std::string;
+using std::vector;
+using std::weak_ptr;
 #pragma region 方块
 struct BlockLegacy {
 	string getBlockName() {
@@ -60,13 +63,6 @@ struct Level {
 		return *(VA*)((VA)this + 8280);
 	}
 };
-struct MCUUID {
-	// 取uuid字符串
-	string toString() {
-		string s;
-		return SYMCALL<string&>("?asString@UUID@mce@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ", this,&s);
-	}
-};
 struct Vec3 {
 	float x, y, z;
 };
@@ -98,7 +94,6 @@ struct ItemStackBase {
 	ItemStackBase* mChargedItem;
 	VA uk;
 
-
 	VA save() {
 		VA* cp = new VA[8]{ 0 };
 		return SYMCALL<VA>("?save@ItemStackBase@@QEBA?AV?$unique_ptr@VCompoundTag@@U?$default_delete@VCompoundTag@@@std@@@std@@XZ",
@@ -125,7 +120,7 @@ struct ItemStackBase {
 			this, t);
 	}
 	bool getFromId(short id, short aux, char count) {
-		memcpy(this, SYM("?EMPTY_ITEM@ItemStack@@2V1@B"), 0x90);
+		memcpy(this, GetServerSymbol("?EMPTY_ITEM@ItemStack@@2V1@B"), 0x90);
 		bool ret = SYMCALL<bool>("?_setItem@ItemStackBase@@IEAA_NH@Z", this, id);
 		mCount = count;
 		mAuxValue = aux;
@@ -292,7 +287,7 @@ struct Actor {
 		return false;
 	}
 };
-struct Mob :public Actor {
+struct Mob : Actor {
 	// 获取状态列表
 	vector<MobEffectInstance>* getEffects() {					// IDA Mob::addAdditionalSaveData
 		return (vector<MobEffectInstance>*)((VA*)this + 152);
@@ -315,12 +310,14 @@ struct Mob :public Actor {
 		return *((VA*)((VA)this + 816));
 	}
 };
-struct Player :public Mob {
+struct Player : Mob {
 	// 取uuid
-	MCUUID* getUuid() {	// IDA ServerNetworkHandler::_createNewPlayer
-		return (MCUUID*)((char*)this + 2720);
+	string getUuid() {	// IDA ServerNetworkHandler::_createNewPlayer
+		void* p;
+		return SYMCALL<string&>("?asString@UUID@mce@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
+			this + 2720,&p);
 	}
-	// 发送包
+	// 发送数据包
 	void sendPacket(VA pkt) {
 		return SYMCALL<void>("?sendNetworkPacket@ServerPlayer@@UEBAXAEAVPacket@@@Z",
 			this, pkt);
@@ -398,7 +395,7 @@ struct Player :public Mob {
 	//传送
 	void teleport(Vec3 target, int dim) {
 		SYMCALL<void>("?teleport@TeleportCommand@@SAXAEAVActor@@VVec3@@PEAV3@V?$AutomaticID@VDimension@@H@@VRelativeFloat@@4HAEBUActorUniqueID@@@Z",
-			this, target, 0, dim, 0, 0, 0, SYM("?INVALID_ID@ActorUniqueID@@2U1@B"));
+			this, target, 0, dim, 0, 0, 0, GetServerSymbol("?INVALID_ID@ActorUniqueID@@2U1@B"));
 	}
 };
 #pragma region 容器

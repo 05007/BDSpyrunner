@@ -7,23 +7,14 @@
 #include <map>
 #include <string>
 #include <string_view>
-// python
-#define PY_SSIZE_T_CLEAN
-#include "include/Python.h"
+using VA = unsigned long long;
+using RVA = unsigned int;
 extern "C" {
 	_declspec(dllimport) int HookFunction(void* oldfunc, void** poutold, void* newfunc);
 	_declspec(dllimport) void* GetServerSymbol(char const* name);
 }
-//----------------------------------
-// 基本类型定义
-//----------------------------------
-using VA = unsigned __int64;
-using RVA = unsigned int;
-template<typename Type>
-using Ptr = Type*;
-typedef unsigned long long CHash;
-constexpr CHash do_hash(std::string_view x) {
-	CHash rval = 0;
+constexpr VA do_hash(std::string_view x) {
+	VA rval = 0;
 	for (size_t i = 0; i < x.size(); ++i) {
 		rval *= 131;
 		rval += x[i];
@@ -31,9 +22,9 @@ constexpr CHash do_hash(std::string_view x) {
 	}
 	return rval;
 }
-constexpr CHash do_hash2(std::string_view x) {
+constexpr VA do_hash2(std::string_view x) {
 	//ap hash
-	CHash rval = 0;
+	VA rval = 0;
 	for (size_t i = 0; i < x.size(); ++i) {
 		if (i & 1) {
 			rval ^= (~((rval << 11) ^ x[i] ^ (rval >> 5)));
@@ -62,14 +53,11 @@ inline const T& dAccess(void const* ptr, uintptr_t off) {
 }
 #define __WEAK __declspec(selectany)
 
-#define SYM(x) GetServerSymbol(x)
-// 调用函数
 template<typename ret, typename... Args>
-ret SYMCALL(const char* fn, Args... args) {
-	return ((ret(*)(Args...))SYM(fn))(args...);
+inline ret SYMCALL(const char* fn, Args... args) {
+	return ((ret(*)(Args...))GetServerSymbol(fn))(args...);
 }
-class THookRegister {
-public:
+struct THookRegister {
 	THookRegister(void* address, void* hook, void** org) {
 		auto ret = HookFunction(address, org, hook);
 		if (ret != 0) {
@@ -105,9 +93,9 @@ public:
 		THookRegister(sym, hookUnion.b, org);
 	}
 };
-template <CHash, CHash>
+template <VA, VA>
 struct THookTemplate;
-template <CHash, CHash>
+template <VA, VA>
 extern THookRegister THookRegisterTemplate;
 
 #define _TInstanceHook(class_inh, pclass, iname, sym, ret, ...)                                             \

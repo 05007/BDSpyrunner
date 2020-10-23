@@ -1,4 +1,5 @@
 注:函数名后加了***的表示功能无效且属于预期功能
+注:在监听器执行的函数中的错误流目前有问题,所有报错皆为TypeErr,如果检查代码无误后还是报错,那就找twoone3
 // 函数名：logout
 // 功能：发送一条命令输出消息（可被拦截）
 // 参数个数：1个
@@ -237,13 +238,13 @@
 // 返回值：玩家基本信息字典
 [例] mc.getPlayerInfo('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9')
 
-// 函数名：transferserver
+// 函数名：transferServer
 // 功能：传送玩家至指定服务器
 // 参数个数：3个
 // 参数类型：字符串，字符串，整型
 // 参数详解：uuid - 在线玩家的uuid字符串，addr - 待传服务器，port - 端口
 // 返回值：是否传送成功
-[例] mc.transferserver('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', 'www.xiafox.com', 19132)
+[例] mc.transferServer('8f976e22-78bc-3fe1-8ee5-cf5ff56347b9', 'www.xiafox.com', 19132)
 
 // 函数名：teleport
 // 功能：传送玩家至指定坐标和维度

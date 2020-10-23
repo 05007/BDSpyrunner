@@ -1,9 +1,4 @@
-﻿// pch.cpp: 与预编译标头对应的源文件
-
-#include "预编译头.h"
-
-// 当使用预编译的头时，需要使用此源文件，编译才能成功。
-
+﻿#include "预编译头.h"
 void init();
 
 // DLL模块启动或退出时候调用
@@ -14,12 +9,9 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 	switch (ul_reason_for_call) {
 	case DLL_PROCESS_ATTACH:
 		init();
-		break;
 	case DLL_THREAD_ATTACH:
 	case DLL_THREAD_DETACH:
-		break;
 	case DLL_PROCESS_DETACH:
-		Py_Finalize();
 		break;
 	}
 	return TRUE;

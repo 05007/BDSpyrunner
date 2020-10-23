@@ -1,19 +1,23 @@
 #include "预编译头.h"
 #include "结构体.hpp"
 #include <thread>
-using namespace std;
-#pragma warning(disable:4996)
+#define PY_SSIZE_T_CLEAN
+#include "include/Python.h"
+using std::string;
+using std::map;
+using std::unordered_map;
+using std::thread;
 #pragma region 宏定义
 //调用所有函数
 #define CallAll(type,...) \
-	int ret,i = 0;bool bar = true;\
-	while(PyCallable_Check(funcs[type][i])){\
+	int ret,i = 0;bool bar = true;				\
+	while(PyCallable_Check(funcs[type][i])){	\
 		PyArg_Parse(PyObject_CallFunction(funcs[type][i++],__VA_ARGS__), "p", &ret);\
 		if(!ret)bar = false;\
-	}\
-	PyErr_Print()
+	}
+//PyErr_Print()
 //标准流输出信息
-#define pr(...) cout <<__VA_ARGS__<<endl
+#define cout(...) std::cout <<__VA_ARGS__<< std::endl
 //THook返回判断
 #define RET(...) \
 	if (bar) return original(__VA_ARGS__);\
@@ -38,7 +42,7 @@ using namespace std;
 static VA cmd_queue = 0;
 static VA level = 0;
 static VA server_network_handle = 0;
-static const VA STD_COUT_HANDLE = *(VA*)SYM("__imp_?cout@std@@3V?$basic_ostream@DU?$char_traits@D@std@@@1@A");
+static const VA STD_COUT_HANDLE = *(VA*)GetServerSymbol("__imp_?cout@std@@3V?$basic_ostream@DU?$char_traits@D@std@@@1@A");
 static unordered_map<string, PyObject* [10]> funcs;//py函数
 static unordered_map<string, Player*> onlinePlayers;//在线玩家
 static unordered_map<Player*, bool> playerSign;//玩家在线
@@ -50,13 +54,11 @@ static Scoreboard* scoreboard;//储存计分板名称
 // 插件载入
 static PyObject* PyInit_mc();
 void init() {
-	pr(u8"[插件]BDSPyrunner加载成功~");
-	PyStatus status;
+	cout(u8"[插件]BDSPyrunner加载成功~");
 	PyPreConfig cfg;
 	PyPreConfig_InitIsolatedConfig(&cfg);
 	cfg.utf8_mode = 1;
-	cfg.isolated = 1;
-	status = Py_PreInitialize(&cfg);
+	PyStatus status = Py_PreInitialize(&cfg);
 	if (PyStatus_Exception(status))Py_ExitStatusException(status);
 	PyImport_AppendInittab("mc", &PyInit_mc); //增加一个模块
 	Py_Initialize();
@@ -65,10 +67,10 @@ void init() {
 	long long handle = _findfirst64i32("./py/*.py", &fileinfo);
 	do {
 		Py_NewInterpreter();
-		cout << u8"读取Py文件:" << fileinfo.name << endl;
-		char fn[32] = "./py/";
-		strcat(fn, fileinfo.name);
-		f = fopen(fn, "rb");
+		cout(u8"读取Py文件:" << fileinfo.name);
+		string fn = "./py/";
+		fn += fileinfo.name;
+		fopen_s(&f, fn.c_str(), "rb");
 		PyRun_SimpleFileExFlags(f, fileinfo.name, 1, 0);
 	} while (!_findnext64i32(handle, &fileinfo));
 	_findclose(handle);
@@ -132,7 +134,7 @@ static unsigned getFormId() {
 	return id;
 }
 // 创建数据包
-static inline void cPacket(VA &tpk,int p) {
+static inline void cPacket(VA& tpk, int p) {
 	SYMCALL<VA>("?createPacket@MinecraftPackets@@SA?AV?$shared_ptr@VPacket@@@std@@W4MinecraftPacketIds@@@Z",
 		&tpk, p);
 }
@@ -181,7 +183,7 @@ static void logout(string str) {
 static int getscoreboard(Player* p, string objname) {
 	auto testobj = scoreboard->getObjective(&objname);
 	if (!testobj) {
-		pr(u8"没有找到对应计分板，自动创建: " << objname);
+		cout(u8"没有找到对应计分板，自动创建: " << objname);
 		runcmd("scoreboard objectives add \"" + objname + "\" dummy money");
 		return 0;
 	}
@@ -190,7 +192,7 @@ static int getscoreboard(Player* p, string objname) {
 	return scores->getCount();
 }
 // 模拟玩家发送消息
-static bool sendText(string uuid, string msg,int mode) {
+static bool sendText(string uuid, string msg, int mode) {
 	Player* p = onlinePlayers[uuid];
 	if (playerSign[p]) {	// IDA ServerNetworkHandler::handle
 		VA tpk;//TextPacket
@@ -250,7 +252,7 @@ static PyObject* api_getOnLinePlayers(PyObject* self, PyObject* args) {
 	for (auto& op : playerSign) {
 		Player* p = op.first;
 		if (op.second) {
-			PyDict_SetItemString(ret, p->getNameTag().c_str(), Py_BuildValue("[s,s]", p->getUuid()->toString().c_str(), p->getXuid(level).c_str()));
+			PyDict_SetItemString(ret, p->getNameTag().c_str(), Py_BuildValue("[s,s]", p->getUuid().c_str(), p->getXuid(level).c_str()));
 		}
 	}
 	thread(delay, 1, ret).detach();
@@ -288,7 +290,7 @@ static PyObject* api_setListener(PyObject* self, PyObject* args) {
 		case 24:AddFunction("Move", func); break;
 		case 25:AddFunction("Attack", func); break;
 		case 26:AddFunction("LevelExplode", func); break;
-		default: pr(u8"找不到此类监听!"); break;
+		default: cout(u8"找不到此类监听!"); break;
 		}
 	return Py_None;
 }
@@ -419,7 +421,7 @@ static PyObject* api_talkAs(PyObject* self, PyObject* args) {
 	const char* uuid;
 	const char* msg;
 	if (PyArg_ParseTuple(args, "ss", &uuid, &msg)) {
-		return Py_BuildValue("i", sendText(uuid, msg,1));
+		return Py_BuildValue("i", sendText(uuid, msg, 1));
 	}
 	return Py_None;
 }
@@ -521,13 +523,13 @@ THook(bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$a
 			return false;
 		}
 	}
-	CallAll("ServerCmd", "{s:s}", "cmd", *cmd);
+	CallAll("ServerCmd", "s", *cmd);
 	RET(_this, cmd);
 }
 // 玩家加载名字
 THook(VA, "?onPlayerJoined@ServerScoreboard@@UEAAXAEBVPlayer@@@Z",
 	VA a1, Player* p) {
-	string uuid = p->getUuid()->toString();
+	string uuid = p->getUuid();
 	onlinePlayers[uuid] = p;
 	playerSign[p] = true;
 	getPlayerInfo(p);
@@ -543,10 +545,8 @@ THook(VA, "?onPlayerJoined@ServerScoreboard@@UEAAXAEBVPlayer@@@Z",
 // 玩家离开游戏
 THook(void, "?_onPlayerLeft@ServerNetworkHandler@@AEAAXPEAVServerPlayer@@_N@Z",
 	VA _this, Player* p, char v3) {
-	string uuid = p->getUuid()->toString();
-	playerSign[p] = false;
+	string uuid = p->getUuid();
 	playerSign.erase(p);
-	onlinePlayers[uuid] = NULL;
 	onlinePlayers.erase(uuid);
 	getPlayerInfo(p);
 	CallAll("PlayerLeft", "{s:s,s:[f,f,f],s:i,s:i,s:s}",
@@ -735,7 +735,7 @@ THook(void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormResponsePacket@
 	VA _this, VA id, VA handle, ModalFormResponsePacket** fp) {
 	ModalFormResponsePacket* fmp = *fp;
 	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
-		handle, id, *(char*)((VA)fmp + 16));
+		handle, id, *((char*)fmp + 16));
 	if (p) {
 		unsigned fid = fmp->getFormId();
 		if (releaseForm(fid)) {
@@ -745,7 +745,7 @@ THook(void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormResponsePacket@
 				"XYZ", pp->x, pp->y, pp->z,
 				"dimensionid", did,
 				"isstand", st,
-				"uuid", p->getUuid()->toString().c_str(),
+				"uuid", p->getUuid().c_str(),
 				"selected", fmp->getSelectStr().c_str(),
 				"formid", fid
 			);

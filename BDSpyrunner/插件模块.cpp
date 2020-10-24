@@ -3,24 +3,20 @@
 #include <thread>
 #define PY_SSIZE_T_CLEAN
 #include "include/Python.h"
-using std::string;
-using std::map;
-using std::unordered_map;
-using std::thread;
 #pragma region 宏定义
 //调用所有函数
-#define CallAll(type,...) \
-	int ret,i = 0;bool bar = true;				\
-	while(PyCallable_Check(funcs[type][i])){	\
-		PyArg_Parse(PyObject_CallFunction(funcs[type][i++],__VA_ARGS__), "p", &ret);\
-		if(!ret)bar = false;\
+#define CallAll(type,...)									\
+	bool res = true;										\
+	for (auto & fn :funcs[type]) {							\
+		PyObject* r = PyObject_CallFunction(fn,__VA_ARGS__);\
+		PyErr_Print();int bar = 1;PyArg_Parse(r,"p",&bar);	\
+		if (!bar) res = false;Py_XDECREF(r);				\
 	}
-//PyErr_Print()
 //标准流输出信息
-#define cout(...) std::cout <<__VA_ARGS__<< std::endl
+#define cout(...) cout <<__VA_ARGS__<< endl
 //THook返回判断
 #define RET(...) \
-	if (bar) return original(__VA_ARGS__);\
+	if (res) return original(__VA_ARGS__);\
 	else return 0
 //根据Player*获取玩家基本信息
 #define getPlayerInfo(p) \
@@ -28,22 +24,13 @@ using std::thread;
 	int did = p->getDimensionId();\
 	Vec3* pp = p->getPos();\
 	BYTE st = p->isStand();
-// 添加函数成员
-#define AddFunction(n, func) \
-	if(PyCallable_Check(func))\
-	for (int i = 0; i < 10; i++) {\
-		if (!funcs[n][i]) {\
-			funcs[n][i] = func;\
-			break;\
-		}\
-	}
 #pragma endregion
 #pragma region 全局变量
 static VA cmd_queue = 0;
 static VA level = 0;
 static VA server_network_handle = 0;
 static const VA STD_COUT_HANDLE = *(VA*)GetServerSymbol("__imp_?cout@std@@3V?$basic_ostream@DU?$char_traits@D@std@@@1@A");
-static unordered_map<string, PyObject* [10]> funcs;//py函数
+static unordered_map<string, vector<PyObject*>> funcs;//py函数
 static unordered_map<string, Player*> onlinePlayers;//在线玩家
 static unordered_map<Player*, bool> playerSign;//玩家在线
 static map<unsigned, bool> fids;//表单ID
@@ -74,38 +61,6 @@ void init() {
 		PyRun_SimpleFileExFlags(f, fileinfo.name, 1, 0);
 	} while (!_findnext64i32(handle, &fileinfo));
 	_findclose(handle);
-}
-// UTF-8 转 GBK
-static string UTF8ToGBK(const char* strUTF8) {
-	int len = MultiByteToWideChar(CP_UTF8, 0, strUTF8, -1, NULL, 0);
-	wchar_t* wszGBK = new wchar_t[len + 1];
-	memset(wszGBK, 0, len * 2 + 2);
-	MultiByteToWideChar(CP_UTF8, 0, strUTF8, -1, wszGBK, len);
-	len = WideCharToMultiByte(CP_ACP, 0, wszGBK, -1, NULL, 0, NULL, NULL);
-	char* szGBK = new char[len + 1];
-	memset(szGBK, 0, len + 1);
-	WideCharToMultiByte(CP_ACP, 0, wszGBK, -1, szGBK, len, NULL, NULL);
-	string strTemp(szGBK);
-	if (wszGBK) delete[] wszGBK;
-	if (szGBK) delete[] szGBK;
-	return strTemp;
-}
-// GBK 转 UTF-8
-static string GBKToUTF8(const char* strGBK) {
-	string strOutUTF8 = "";
-	WCHAR* str1;
-	int n = MultiByteToWideChar(CP_ACP, 0, strGBK, -1, NULL, 0);
-	str1 = new WCHAR[n];
-	MultiByteToWideChar(CP_ACP, 0, strGBK, -1, str1, n);
-	n = WideCharToMultiByte(CP_UTF8, 0, str1, -1, NULL, 0, NULL, NULL);
-	char* str2 = new char[n];
-	WideCharToMultiByte(CP_UTF8, 0, str1, -1, str2, n, NULL, NULL);
-	strOutUTF8 = str2;
-	delete[]str1;
-	str1 = NULL;
-	delete[]str2;
-	str2 = NULL;
-	return strOutUTF8;
 }
 // 多线程延时
 static void delay(int time, PyObject* func) {
@@ -161,8 +116,7 @@ static unsigned sendForm(string uuid, string str) {
 	return fid;
 }
 // 跨服传送
-static bool transferServer(string uuid, string address, int port)
-{
+static bool transferServer(string uuid, string address, int port) {
 	Player* p = onlinePlayers[uuid];
 	if (playerSign[p]) {
 		VA tpk;//TransferPacket
@@ -179,18 +133,15 @@ static void logout(string str) {
 	SYMCALL<VA>("??$_Insert_string@DU?$char_traits@D@std@@_K@std@@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@0@AEAV10@QEBD_K@Z",
 		STD_COUT_HANDLE, str.c_str(), str.length());
 }
-// 获取玩家计分板分数
-static int getscoreboard(Player* p, string objname) {
-	auto testobj = scoreboard->getObjective(&objname);
-	if (!testobj) {
-		cout(u8"没有找到对应计分板，自动创建: " << objname);
-		runcmd("scoreboard objectives add \"" + objname + "\" dummy money");
-		return 0;
-	}
+// 获取计分板
+static int getscoreboard(Player* p, string n) {
+	Objective* obj = scoreboard->getObjective(&n);
 	ScoreInfo si[2];
-	auto scores = testobj->getPlayerScore(si, scoreboard->getScoreboardID(p));
+	auto scores = obj->getPlayerScore(si, scoreboard->getScoreboardID(p));
 	return scores->getCount();
 }
+// 设置计分板
+static bool setScoreborad(Player* p, string n) {}
 // 模拟玩家发送消息
 static bool sendText(string uuid, string msg, int mode) {
 	Player* p = onlinePlayers[uuid];
@@ -216,6 +167,21 @@ static bool runcmdAs(string uuid, string cmd) {
 	}
 	return false;
 }
+// 设置侧边栏
+static bool setSidebar(string uuid) {
+	Player* p = onlinePlayers[uuid];
+	if (playerSign[p]) {
+		VA tpk;//SetDisplayObjectivePacket
+		cPacket(tpk, 108);
+		//*(string*)(tpk + 32) = "aa";
+		//*(string*)(tpk + 56) = "bb";
+		//*(string*)(tpk + 88) = "cc";
+		//*(string*)(tpk + 120) = "dd";
+		//*(string*)(tpk + 152) = "ee";
+		p->sendPacket(tpk);
+	}
+	return true;
+}
 // 判断指针是否为玩家列表中指针
 static inline bool checkIsPlayer(void* p) {
 	return playerSign[(Player*)p];
@@ -225,13 +191,12 @@ static inline bool checkIsPlayer(void* p) {
 // 指令输出
 static PyObject* api_logout(PyObject* self, PyObject* args) {
 	const char* msg;
-	if (PyArg_ParseTuple(args, "s", &msg)) {
+	if (PyArg_ParseTuple(args, "s", &msg))
 		logout(msg);
-	}
 	return Py_None;
 }
 // 执行指令
-static PyObject* api_runCmd(PyObject* self, PyObject* args) {
+static PyObject* api_runcmd(PyObject* self, PyObject* args) {
 	const char* cmd;
 	if (PyArg_ParseTuple(args, "s", &cmd))
 		runcmd(cmd);
@@ -260,38 +225,10 @@ static PyObject* api_getOnLinePlayers(PyObject* self, PyObject* args) {
 }
 // 设置监听
 static PyObject* api_setListener(PyObject* self, PyObject* args) {
-	int m = 0;
-	PyObject* func = 0;
-	if (PyArg_ParseTuple(args, "iO", &m, &func))
-		switch (m) {
-		case 1:AddFunction("ServerCmd", func); break;
-		case 2:AddFunction("ServerCmdOutput", func); break;
-		case 3:AddFunction("FormSelected", func); break;
-		case 4:AddFunction("UseItem", func); break;
-		case 5:AddFunction("PlacedBlock", func); break;
-		case 6:AddFunction("DestroyBlock", func); break;
-		case 7:AddFunction("StartOpenChest", func); break;
-		case 8:AddFunction("StartOpenBarrel", func); break;
-		case 9:AddFunction("StopOpenChest", func); break;
-		case 10:AddFunction("StopOpenBarrel", func); break;
-		case 11:AddFunction("SetSlot", func); break;
-		case 12:AddFunction("ChangeDimension", func); break;
-		case 13:AddFunction("MobDie", func); break;
-		case 14:AddFunction("MobHurt", func); break;
-		case 15:AddFunction("Respawn", func); break;
-		case 16:AddFunction("Chat", func); break;
-		case 17:AddFunction("InputText", func); break;
-		case 18:AddFunction("CommandBlockUpdate", func); break;
-		case 19:AddFunction("InputCommand", func); break;
-		case 20:AddFunction("BlockCmd", func); break;
-		case 21:AddFunction("NpcCmd", func); break;
-		case 22:AddFunction("LoadName", func); break;
-		case 23:AddFunction("PlayerLeft", func); break;
-		case 24:AddFunction("Move", func); break;
-		case 25:AddFunction("Attack", func); break;
-		case 26:AddFunction("LevelExplode", func); break;
-		default: cout(u8"找不到此类监听!"); break;
-		}
+	const char* m;
+	PyObject* func;
+	if (PyArg_ParseTuple(args, "sO", &m, &func) && PyCallable_Check(func))
+		funcs[m].push_back(func);
 	return Py_None;
 }
 // 发送表单
@@ -393,7 +330,7 @@ static PyObject* api_setNameTag(PyObject* self, PyObject* args) {
 	if (PyArg_ParseTuple(args, "ss", &uuid, &name)) {
 		Player* pl = onlinePlayers[uuid];
 		if (playerSign[pl]) {
-			pl->reName(name);
+			pl->setName(name);
 		}
 	}
 	return Py_None;
@@ -452,10 +389,19 @@ static PyObject* api_tellraw(PyObject* self, PyObject* args) {
 	}
 	return Py_None;
 }
+// 设置侧边栏
+static PyObject* api_setSidebar(PyObject* self, PyObject* args) {
+	const char* uuid;
+	const char* msg;
+	if (PyArg_ParseTuple(args, "ss", &uuid, &msg)) {
+		return Py_BuildValue("i", setSidebar(uuid));
+	}
+	return Py_None;
+}
 // 方法列表
 static PyMethodDef mcMethods[] = {
 	{"logout", api_logout, METH_VARARGS,""},
-	{"runcmd", api_runCmd, METH_VARARGS,""},
+	{"runcmd", api_runcmd, METH_VARARGS,""},
 	{"setTimeout", api_setTimeout, METH_VARARGS,""},
 	{"getOnLinePlayers", api_getOnLinePlayers, METH_NOARGS,""},
 	{"setListener", api_setListener, METH_VARARGS,""},
@@ -473,6 +419,7 @@ static PyMethodDef mcMethods[] = {
 	{"runcmdAs", api_runcmdAs, METH_VARARGS,""},
 	{"teleport",api_teleport, METH_VARARGS,""},
 	{"tellraw",api_tellraw, METH_VARARGS,""},
+	{"setSidebar",api_setSidebar, METH_VARARGS,""},
 	{NULL,NULL,NULL,NULL}
 };
 // 模块声明
@@ -504,11 +451,26 @@ THook(VA, "??0GameSession@@QEAA@AEAVNetworkHandler@@V?$unique_ptr@VServerNetwork
 	server_network_handle = *a3;
 	return original(a1, a2, a3, a4, a5, a6, a7);
 }
+// 命令注册
+THook(void, "?setup@ChangeSettingCommand@@SAXAEAVCommandRegistry@@@Z",
+	void* _this) {
+	for (auto& cmd : command) {
+		SYMCALL<void>("?registerCommand@CommandRegistry@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PEBDW4CommandPermissionLevel@@UCommandFlag@@3@Z",
+			_this, cmd.first.c_str(), cmd.second.c_str(), 0, 0, 64);
+	}
+	original(_this);
+}
+// 计分板命令注册（开服时获取所有的计分板名称）
+THook(void*, "??0ServerScoreboard@@QEAA@VCommandSoftEnumRegistry@@PEAVLevelStorage@@@Z",
+	void* _this, void* a2, void* a3) {
+	scoreboard = (Scoreboard*)original(_this, a2, a3);
+	return scoreboard;
+}
 // 服务器后台指令输出
 THook(VA, "??$_Insert_string@DU?$char_traits@D@std@@_K@std@@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@0@AEAV10@QEBD_K@Z",
 	VA handle, char* str, VA size) {
 	if (handle == STD_COUT_HANDLE) {
-		CallAll("ServerCmdOutput", "s", str);
+		CallAll(u8"后台输出", "s", str);
 		RET(handle, str, size);
 	}
 	return original(handle, str, size);
@@ -523,7 +485,7 @@ THook(bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$a
 			return false;
 		}
 	}
-	CallAll("ServerCmd", "s", *cmd);
+	CallAll(u8"后台输入", "s", *cmd);
 	RET(_this, cmd);
 }
 // 玩家加载名字
@@ -533,7 +495,7 @@ THook(VA, "?onPlayerJoined@ServerScoreboard@@UEAAXAEBVPlayer@@@Z",
 	onlinePlayers[uuid] = p;
 	playerSign[p] = true;
 	getPlayerInfo(p);
-	CallAll("LoadName", "{s:s,s:[f,f,f],s:i,s:i,s:s}",
+	CallAll(u8"加载名字", "{s:s,s:[f,f,f],s:i,s:i,s:s}",
 		"playername", pn,
 		"XYZ", pp->x, pp->y, pp->z,
 		"dimensionid", did,
@@ -549,7 +511,7 @@ THook(void, "?_onPlayerLeft@ServerNetworkHandler@@AEAAXPEAVServerPlayer@@_N@Z",
 	playerSign.erase(p);
 	onlinePlayers.erase(uuid);
 	getPlayerInfo(p);
-	CallAll("PlayerLeft", "{s:s,s:[f,f,f],s:i,s:i,s:s}",
+	CallAll(u8"离开游戏", "{s:s,s:[f,f,f],s:i,s:i,s:s}",
 		"playername", pn,
 		"XYZ", pp->x, pp->y, pp->z,
 		"dimensionid", did,
@@ -576,7 +538,7 @@ THook(bool, "?useItemOn@GameMode@@UEAA_NAEAVItemStack@@AEBVBlockPos@@EAEBVVec3@@
 	BlockLegacy* bl = b->getBlockLegacy();
 	short bid = bl->getBlockItemID();
 	string bn = bl->getBlockName();
-	CallAll("UseItem", "{s:s,s:[f,f,f],s:i,s:i,s:i,s:s,s:s,s:i,s:[i,i,i],s:i}",
+	CallAll(u8"使用物品", "{s:s,s:[f,f,f],s:i,s:i,s:i,s:s,s:s,s:i,s:[i,i,i],s:i}",
 		"playername", pn,
 		"XYZ", pp->x, pp->y, pp->z,
 		"dimensionid", did,
@@ -592,13 +554,13 @@ THook(bool, "?useItemOn@GameMode@@UEAA_NAEAVItemStack@@AEBVBlockPos@@EAEBVVec3@@
 }
 // 玩家放置方块
 THook(bool, "?mayPlace@BlockSource@@QEAA_NAEBVBlock@@AEBVBlockPos@@EPEAVActor@@_N@Z",
-	BlockSource* _this, Block* b, BlockPos* bp, unsigned __int8 a4, struct Actor* p, bool _bool) {
+	BlockSource* _this, Block* b, BlockPos* bp, unsigned __int8 a4, Actor* p, bool _bool) {
 	if (p && checkIsPlayer(p)) {
 		BlockLegacy* bl = b->getBlockLegacy();
 		short bid = bl->getBlockItemID();
 		string bn = bl->getBlockName();
 		getPlayerInfo(p);
-		CallAll("PlacedBlock", "{s:s,s:[f,i,f],s:i,s:s,s:i,s:[i,i,i],s:i}",
+		CallAll(u8"放置方块", "{s:s,s:[f,i,f],s:i,s:s,s:i,s:[i,i,i],s:i}",
 			"playername", pn.c_str(),
 			"XYZ", pp->x, pp->y, pp->z,
 			"dimensionid", did,
@@ -621,7 +583,7 @@ THook(bool, "?_destroyBlockInternal@GameMode@@AEAA_NAEBVBlockPos@@E@Z",
 	short bid = bl->getBlockItemID();
 	string bn = bl->getBlockName();
 	getPlayerInfo(p);
-	CallAll("DestroyBlock", "{s:s,s:[f,f,f],s:i,s:s,s:i,s:[i,i,i],s:i}",
+	CallAll(u8"破坏方块", "{s:s,s:[f,f,f],s:i,s:s,s:i,s:[i,i,i],s:i}",
 		"playername", pn,
 		"XYZ", pp->x, pp->y, pp->z,
 		"dimensionid", did,
@@ -636,7 +598,7 @@ THook(bool, "?_destroyBlockInternal@GameMode@@AEAA_NAEBVBlockPos@@E@Z",
 THook(bool, "?use@ChestBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@@Z",
 	void* _this, Player* p, BlockPos* bp) {
 	getPlayerInfo(p);
-	CallAll("StartOpenChest", "{s:s,s:[f,f,f],s:i,s:[i,i,i],s:i}",
+	CallAll(u8"玩家开箱", "{s:s,s:[f,f,f],s:i,s:[i,i,i],s:i}",
 		"playername", pn,
 		"XYZ", pp->x, pp->y, pp->z,
 		"dimensionid", did,
@@ -649,7 +611,7 @@ THook(bool, "?use@ChestBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@@Z",
 THook(bool, "?use@BarrelBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@@Z",
 	void* _this, Player* p, BlockPos* bp) {
 	getPlayerInfo(p);
-	CallAll("StartOpenBarrel", "{s:s,s:[f,f,f],s:i,s:[i,i,i],s:i}",
+	CallAll(u8"玩家开桶", "{s:s,s:[f,f,f],s:i,s:[i,i,i],s:i}",
 		"playername", pn,
 		"XYZ", pp->x, pp->y, pp->z,
 		"dimensionid", did,
@@ -666,7 +628,7 @@ THook(void, "?stopOpen@ChestBlockActor@@UEAAXAEAVPlayer@@@Z",
 	//auto bs = (BlockSource*)((Level*)p->getLevel())->getDimension(p->getDimensionId())->getBlockSouce();
 	//auto b = bs->getBlock(bp);
 	getPlayerInfo(p);
-	CallAll("StopOpenChest", "{s:s,s:[f,f,f],s:i,s:[i,i,i],s:i}",
+	CallAll(u8"玩家关箱", "{s:s,s:[f,f,f],s:i,s:[i,i,i],s:i}",
 		"playername", pn,
 		"XYZ", pp->x, pp->y, pp->z,
 		"dimensionid", did,
@@ -683,7 +645,7 @@ THook(void, "?stopOpen@BarrelBlockActor@@UEAAXAEAVPlayer@@@Z",
 	//auto bs = (BlockSource*)((Level*)p->getLevel())->getDimension(p->getDimensionId())->getBlockSouce();
 	//auto b = bs->getBlock(bp);
 	getPlayerInfo(p);
-	CallAll("StopOpenBarrel", "{s:s,s:[f,f,f],s:i,s:[i,i,i],s:i}",
+	CallAll(u8"玩家关桶", "{s:s,s:[f,f,f],s:i,s:[i,i,i],s:i}",
 		"playername", pn,
 		"XYZ", pp->x, pp->y, pp->z,
 		"dimensionid", did,
@@ -711,7 +673,7 @@ THook(void, "?containerContentChanged@LevelContainerModel@@UEAAXH@Z",
 			auto iname = string(is->getName());
 			auto p = a1->getPlayer();
 			getPlayerInfo(p);
-			CallAll("SetSlot", "{s:s,s:[f,f,f],s:i,s:s,s:i,s:[i,i,i],s:i,s:i,s:i,s:s,s:i,s:i}",
+			CallAll(u8"放入取出", "{s:s,s:[f,f,f],s:i,s:s,s:i,s:[i,i,i],s:i,s:i,s:i,s:s,s:i,s:i}",
 				"playername", pn,
 				"XYZ", pp->x, pp->y, pp->z,
 				"dimensionid", did,
@@ -740,7 +702,7 @@ THook(void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormResponsePacket@
 		unsigned fid = fmp->getFormId();
 		if (releaseForm(fid)) {
 			getPlayerInfo(p);
-			CallAll("FormSelected", "{s:s,s:[f,f,f],s:i,s:i,s:s,s:s,s:i}",
+			CallAll(u8"选择表单", "{s:s,s:[f,f,f],s:i,s:i,s:s,s:s,s:i}",
 				"playername", pn,
 				"XYZ", pp->x, pp->y, pp->z,
 				"dimensionid", did,
@@ -762,7 +724,7 @@ THook(bool, "?attack@Player@@UEAA_NAEAVActor@@@Z",
 	float hm, h;
 	a->getHealth(hm, h);
 	getPlayerInfo(p);
-	CallAll("Attack", "{s:s,s:[f,f,f],s:i,s:i,s:s,s:s,s:f}",
+	CallAll(u8"玩家攻击", "{s:s,s:[f,f,f],s:i,s:i,s:s,s:s,s:f}",
 		"playername", pn,
 		"XYZ", pp->x, pp->y, pp->z,
 		"dimensionid", did,
@@ -779,7 +741,7 @@ THook(bool, "?_playerChangeDimension@Level@@AEAA_NPEAVPlayer@@AEAVChangeDimensio
 	bool result = original(l, p, req);
 	if (result) {
 		getPlayerInfo(p);
-		CallAll("ChangeDimension", "{s:s,s:[f,f,f],s:i,s:i}",
+		CallAll(u8"切换纬度", "{s:s,s:[f,f,f],s:i,s:i}",
 			"playername", pn,
 			"XYZ", pp->x, pp->y, pp->z,
 			"dimensionid", did,
@@ -827,9 +789,9 @@ THook(void, "?die@Mob@@UEAAXAEBVActorDamageSource@@@Z",
 	PyDict_SetItemString(args, "srcname", Py_BuildValue("s", sr_name.c_str()));
 	PyDict_SetItemString(args, "srctype", Py_BuildValue("s", sr_type.c_str()));
 	PyDict_SetItemString(args, "dmcase", Py_BuildValue("i", *((unsigned*)dmsg + 2)));
-	CallAll("MobDie", "O", args);
+	CallAll(u8"生物死亡", "O", args);
 	Py_DECREF(args);
-	if (bar) original(_this, dmsg);
+	if (res) original(_this, dmsg);
 }
 // 生物受伤
 THook(bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
@@ -870,7 +832,7 @@ THook(bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
 	PyDict_SetItemString(args, "srcname", Py_BuildValue("s", sr_name.c_str()));
 	PyDict_SetItemString(args, "srctype", Py_BuildValue("s", sr_type.c_str()));
 	PyDict_SetItemString(args, "dmcase", Py_BuildValue("i", *((unsigned*)dmsg + 2)));
-	CallAll("MobHurt", "O", args);
+	CallAll(u8"生物受伤", "O", args);
 	Py_DECREF(args);
 	RET(_this, dmsg, a3, a4, a5);
 }
@@ -878,7 +840,7 @@ THook(bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
 THook(void, "?respawn@Player@@UEAAXXZ",
 	Player* p) {
 	getPlayerInfo(p);
-	CallAll("Respawn", "{s:s,s:[f,f,f],s:i,s:i}",
+	CallAll(u8"玩家重生", "{s:s,s:[f,f,f],s:i,s:i}",
 		"playername", pn,
 		"XYZ", pp->x, pp->y, pp->z,
 		"dimensionid", did,
@@ -889,7 +851,7 @@ THook(void, "?respawn@Player@@UEAAXXZ",
 // 聊天消息
 THook(void, "?fireEventPlayerMessage@MinecraftEventing@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@000@Z",
 	void* _this, string& sender, string& target, string& msg, string& style) {
-	CallAll("Chat", "{s:s,s:s,s:s,s:s}",
+	CallAll(u8"聊天消息", "{s:s,s:s,s:s,s:s}",
 		"sender", sender,
 		"target", target,
 		"msg", msg,
@@ -904,7 +866,7 @@ THook(void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVTextP
 		_this, id, *((char*)tp + 16));
 	if (p) {
 		getPlayerInfo(p);
-		CallAll("InputText", "{s:s,s:[f,f,f],s:i,s:s,s:i}",
+		CallAll(u8"输入文本", "{s:s,s:[f,f,f],s:i,s:s,s:i}",
 			"playername", pn,
 			"XYZ", pp->x, pp->y, pp->z,
 			"dimensionid", did,
@@ -921,7 +883,7 @@ THook(void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVComma
 		_this, id, *((char*)crp + 16));
 	if (p) {
 		getPlayerInfo(p);
-		CallAll("InputCommand", "{s:s,s:[f,f,f],s:i,s:s,s:i}",
+		CallAll(u8"输入指令", "{s:s,s:[f,f,f],s:i,s:s,s:i}",
 			"playername", pn,
 			"XYZ", pp->x, pp->y, pp->z,
 			"dimensionid", did,
@@ -930,20 +892,5 @@ THook(void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVComma
 		);
 	}
 	original(_this, id, crp);
-}
-// 命令注册
-THook(void, "?setup@ChangeSettingCommand@@SAXAEAVCommandRegistry@@@Z",
-	void* _this) {
-	for (auto& cmd : command) {
-		SYMCALL<void>("?registerCommand@CommandRegistry@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PEBDW4CommandPermissionLevel@@UCommandFlag@@3@Z",
-			_this, cmd.first.c_str(), cmd.second.c_str(), 0, 0, 64);
-	}
-	original(_this);
-}
-// 计分板命令注册（开服时获取所有的计分板名称）
-THook(void*, "??0ServerScoreboard@@QEAA@VCommandSoftEnumRegistry@@PEAVLevelStorage@@@Z",
-	void* _this, void* a2, void* a3) {
-	scoreboard = (Scoreboard*)original(_this, a2, a3);
-	return scoreboard;
 }
 #pragma endregion

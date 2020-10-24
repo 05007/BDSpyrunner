@@ -1,10 +1,7 @@
 #pragma once
 #include "预编译头.h"
 #include "head/Component.h"
-#include "head/JsonLoader.h"
-using std::string;
-using std::vector;
-using std::weak_ptr;
+#include "head/json.h"
 #pragma region 方块
 struct BlockLegacy {
 	string getBlockName() {
@@ -72,6 +69,13 @@ struct Vec2 {
 struct MobEffectInstance {
 	char fill[0x1C];
 };
+struct CompoundTag {
+	string toString() {
+		void* a;
+		return SYMCALL<string&>("?toString@CompoundTag@@UEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
+			this, &a);
+	}
+};
 struct Item {
 };
 struct ItemStackBase {
@@ -94,10 +98,15 @@ struct ItemStackBase {
 	ItemStackBase* mChargedItem;
 	VA uk;
 
-	VA save() {
-		VA* cp = new VA[8]{ 0 };
-		return SYMCALL<VA>("?save@ItemStackBase@@QEBA?AV?$unique_ptr@VCompoundTag@@U?$default_delete@VCompoundTag@@@std@@@std@@XZ",
-			this, cp);
+	CompoundTag* getNetworkUserData() {
+		void* a;
+		return SYMCALL<CompoundTag*>("?getNetworkUserData@ItemStackBase@@QEBA?AV?$unique_ptr@VCompoundTag@@U?$default_delete@VCompoundTag@@@std@@@std@@XZ",
+			this,&a);
+	}
+	CompoundTag* save() {
+		void* a;
+		return SYMCALL<CompoundTag*>("?save@ItemStackBase@@QEBA?AV?$unique_ptr@VCompoundTag@@U?$default_delete@VCompoundTag@@@std@@@std@@XZ",
+			this, &a);
 	}
 	//Json::Value toJson() {
 	//	VA t = save();
@@ -115,7 +124,7 @@ struct ItemStackBase {
 	//	*(VA*)t = 0;
 	//	delete (VA*)t;
 	//}
-	void fromTag(VA t) {
+	void fromTag(CompoundTag* t) {
 		SYMCALL<VA>("?fromTag@ItemStack@@SA?AV1@AEBVCompoundTag@@@Z",
 			this, t);
 	}
@@ -130,11 +139,16 @@ struct ItemStackBase {
 	Item* getItem() {
 		return SYMCALL<Item*>("?getItem@ItemStackBase@@QEBAPEBVItem@@XZ", this);
 	}
+	string toString() {
+		void* a;
+		return SYMCALL<string&>("?toString@ItemStackBase@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
+			this, &a);
+	}
 };
 struct ItemStack : ItemStackBase {
 	// 取物品ID
 	short getId() {
-		return SYMCALL<short>("?getId@ItemStackBase@@QEBAFXZ",this);
+		return SYMCALL<short>("?getId@ItemStackBase@@QEBAFXZ", this);
 	}
 	// 取物品特殊值
 	short getAuxValue() {
@@ -199,9 +213,23 @@ struct ModalFormResponsePacket {
 struct Container {
 	VA vtable;
 	// 获取容器内所有物品
-	VA getSlots(vector<ItemStack*>* v) const {
-		return SYMCALL<VA>("?getSlots@Container@@UEBA?BV?$vector@PEBVItemStack@@V?$allocator@PEBVItemStack@@@std@@@std@@XZ",
-			1, v);
+	vector<ItemStack*>* getSlots() const {
+		return SYMCALL<vector<ItemStack*>*>("?getSlots@Container@@UEBA?BV?$vector@PEBVItemStack@@V?$allocator@PEBVItemStack@@@std@@@std@@XZ");
+	}
+};
+struct PlayerInventory {
+	ItemStack* getItem(int slot)const {
+		return SYMCALL<ItemStack*>("?getItem@PlayerInventory@@QEBAAEBVItemStack@@HW4ContainerID@@@Z",
+			this, slot, 0);
+	}
+	void setItem(ItemStack* is, int slot) {
+		SYMCALL<void>("?setItem@PlayerInventory@@QEAAXHAEBVItemStack@@W4ContainerID@@_N@Z",
+			this, slot, is, 0, 0);
+	}
+	CompoundTag* save() {
+		void* a;
+		return SYMCALL<CompoundTag*>("?save@FillingContainer@@QEAA?AV?$unique_ptr@VListTag@@U?$default_delete@VListTag@@@std@@@std@@XZ",
+			this, &a);
 	}
 };
 struct Actor {
@@ -315,7 +343,7 @@ struct Player : Mob {
 	string getUuid() {	// IDA ServerNetworkHandler::_createNewPlayer
 		void* p;
 		return SYMCALL<string&>("?asString@UUID@mce@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
-			this + 2720,&p);
+			this + 2720, &p);
 	}
 	// 发送数据包
 	void sendPacket(VA pkt) {
@@ -328,7 +356,7 @@ struct Player : Mob {
 			level, (char*)this + 2720);
 	}
 	// 重设服务器玩家名
-	void reName(string name) {
+	void setName(string name) {
 		SYMCALL<void>("?setName@Player@@UEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
 			this, name);
 	}
@@ -337,8 +365,8 @@ struct Player : Mob {
 		return (VA)this + 2432;		// IDA ServerPlayer::setPermissions
 	}
 	// 获取背包
-	Container* getSupplies() {
-		return (Container*)(*((VA*)this + 366)+176);
+	PlayerInventory* getSupplies() {
+		return (PlayerInventory*)*((VA*)this + 366);//(Container*)(*((VA*)this + 366) + 176);
 	}
 
 	VA getContainerManager() {

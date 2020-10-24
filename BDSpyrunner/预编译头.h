@@ -5,15 +5,15 @@
 #include <string>
 #include <unordered_map>
 #include <map>
-#include <string>
 #include <string_view>
 using VA = unsigned long long;
 using RVA = unsigned int;
+using std::string_view;
 extern "C" {
 	_declspec(dllimport) int HookFunction(void* oldfunc, void** poutold, void* newfunc);
 	_declspec(dllimport) void* GetServerSymbol(char const* name);
 }
-constexpr VA do_hash(std::string_view x) {
+constexpr VA do_hash(string_view x) {
 	VA rval = 0;
 	for (size_t i = 0; i < x.size(); ++i) {
 		rval *= 131;
@@ -22,16 +22,13 @@ constexpr VA do_hash(std::string_view x) {
 	}
 	return rval;
 }
-constexpr VA do_hash2(std::string_view x) {
-	//ap hash
+constexpr VA do_hash2(string_view x) {
 	VA rval = 0;
 	for (size_t i = 0; i < x.size(); ++i) {
-		if (i & 1) {
+		if (i & 1)
 			rval ^= (~((rval << 11) ^ x[i] ^ (rval >> 5)));
-		}
-		else {
+		else
 			rval ^= (~((rval << 7) ^ x[i] ^ (rval >> 3)));
-		}
 	}
 	return rval;
 }
@@ -108,7 +105,7 @@ extern THookRegister THookRegisterTemplate;
 		}                                                                                                   \
 		template <typename... Params>                                                                       \
 		static ret original(pclass* _this, Params&&... params) {                                            \
-			return (((THookTemplate*)_this)->*_original())(std::forward<Params>(params)...);                \
+			return (((THookTemplate*)_this)->*_original())(forward<Params>(params)...);                \
 		}                                                                                                   \
 		ret _hook(__VA_ARGS__);                                                                             \
 	};                                                                                                      \
@@ -132,7 +129,7 @@ extern THookRegister THookRegisterTemplate;
 		}                                                                                                   \
 		template <typename... Params>                                                                       \
 		static ret original(Params&&... params) {                                                          \
-			return _original()(std::forward<Params>(params)...);                                            \
+			return _original()(forward<Params>(params)...);                                            \
 		}                                                                                                   \
 		static ret _hook(__VA_ARGS__);                                                                      \
 	};                                                                                                      \

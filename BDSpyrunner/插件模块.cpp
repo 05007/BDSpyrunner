@@ -17,7 +17,7 @@
 //THook返回判断
 #define RET(...) \
 	if (res) return original(__VA_ARGS__);\
-	else return 0
+	else return _original();
 //根据Player*获取玩家基本信息
 #define getPlayerInfo(p) \
 	string pn = p->getNameTag();\
@@ -48,6 +48,7 @@ void init() {
 	PyStatus status = Py_PreInitialize(&cfg);
 	if (PyStatus_Exception(status))Py_ExitStatusException(status);
 	PyImport_AppendInittab("mc", &PyInit_mc); //增加一个模块
+	//Py_SetPath(L"./py/python38.zip");
 	Py_Initialize();
 	FILE* f;
 	_finddata64i32_t fileinfo;//用于查找的句柄
@@ -168,17 +169,19 @@ static bool runcmdAs(string uuid, string cmd) {
 	return false;
 }
 // 设置侧边栏
-static bool setSidebar(string uuid) {
+static bool setSidebar(string uuid, string title, string name) {
 	Player* p = onlinePlayers[uuid];
 	if (playerSign[p]) {
-		VA tpk;//SetDisplayObjectivePacket
-		cPacket(tpk, 108);
-		//*(string*)(tpk + 32) = "aa";
-		//*(string*)(tpk + 56) = "bb";
-		//*(string*)(tpk + 88) = "cc";
-		//*(string*)(tpk + 120) = "dd";
-		//*(string*)(tpk + 152) = "ee";
+		VA tpk;//setDisplayObjectivePacket
+		cPacket(tpk, 107);
+		*(string*)(tpk + 56) = "sidebar";
+		*(string*)(tpk + 88) = name;
+		*(string*)(tpk + 120) = title;
+		*(string*)(tpk + 152) = "dummy";
+		*(string*)(tpk + 184) = "";
 		p->sendPacket(tpk);
+		//SYMCALL<void>("?setDisplayObjective@Scoreboard@@UEAAPEBVDisplayObjective@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBVObjective@@W4ObjectiveSortOrder@@@Z",
+		//	 title, scoreboard->getObjective(&name),0);
 	}
 	return true;
 }
@@ -391,10 +394,9 @@ static PyObject* api_tellraw(PyObject* self, PyObject* args) {
 }
 // 设置侧边栏
 static PyObject* api_setSidebar(PyObject* self, PyObject* args) {
-	const char* uuid;
-	const char* msg;
-	if (PyArg_ParseTuple(args, "ss", &uuid, &msg)) {
-		return Py_BuildValue("i", setSidebar(uuid));
+	const char* uuid, * name, * list;
+	if (PyArg_ParseTuple(args, "sss", &uuid, &name, &list)) {
+		return Py_BuildValue("i", setSidebar(uuid, name, list));
 	}
 	return Py_None;
 }
@@ -468,10 +470,10 @@ THook(void*, "??0ServerScoreboard@@QEAA@VCommandSoftEnumRegistry@@PEAVLevelStora
 }
 // 服务器后台指令输出
 THook(VA, "??$_Insert_string@DU?$char_traits@D@std@@_K@std@@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@0@AEAV10@QEBD_K@Z",
-	VA handle, char* str, VA size) {
+	VA handle, const char* str, VA size) {
 	if (handle == STD_COUT_HANDLE) {
 		CallAll(u8"后台输出", "s", str);
-		RET(handle, str, size);
+		if (!res)return 0;
 	}
 	return original(handle, str, size);
 }
@@ -598,7 +600,7 @@ THook(bool, "?_destroyBlockInternal@GameMode@@AEAA_NAEBVBlockPos@@E@Z",
 THook(bool, "?use@ChestBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@@Z",
 	void* _this, Player* p, BlockPos* bp) {
 	getPlayerInfo(p);
-	CallAll(u8"玩家开箱", "{s:s,s:[f,f,f],s:i,s:[i,i,i],s:i}",
+	CallAll(u8"打开箱子", "{s:s,s:[f,f,f],s:i,s:[i,i,i],s:i}",
 		"playername", pn,
 		"XYZ", pp->x, pp->y, pp->z,
 		"dimensionid", did,
@@ -611,7 +613,7 @@ THook(bool, "?use@ChestBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@@Z",
 THook(bool, "?use@BarrelBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@@Z",
 	void* _this, Player* p, BlockPos* bp) {
 	getPlayerInfo(p);
-	CallAll(u8"玩家开桶", "{s:s,s:[f,f,f],s:i,s:[i,i,i],s:i}",
+	CallAll(u8"打开木桶", "{s:s,s:[f,f,f],s:i,s:[i,i,i],s:i}",
 		"playername", pn,
 		"XYZ", pp->x, pp->y, pp->z,
 		"dimensionid", did,
@@ -628,7 +630,7 @@ THook(void, "?stopOpen@ChestBlockActor@@UEAAXAEAVPlayer@@@Z",
 	//auto bs = (BlockSource*)((Level*)p->getLevel())->getDimension(p->getDimensionId())->getBlockSouce();
 	//auto b = bs->getBlock(bp);
 	getPlayerInfo(p);
-	CallAll(u8"玩家关箱", "{s:s,s:[f,f,f],s:i,s:[i,i,i],s:i}",
+	CallAll(u8"关闭箱子", "{s:s,s:[f,f,f],s:i,s:[i,i,i],s:i}",
 		"playername", pn,
 		"XYZ", pp->x, pp->y, pp->z,
 		"dimensionid", did,
@@ -642,10 +644,8 @@ THook(void, "?stopOpen@BarrelBlockActor@@UEAAXAEAVPlayer@@@Z",
 	void* _this, Player* p) {
 	auto real_this = reinterpret_cast<void*>(reinterpret_cast<VA>(_this) - 248);
 	auto bp = reinterpret_cast<BlockActor*>(real_this)->getPosition();
-	//auto bs = (BlockSource*)((Level*)p->getLevel())->getDimension(p->getDimensionId())->getBlockSouce();
-	//auto b = bs->getBlock(bp);
 	getPlayerInfo(p);
-	CallAll(u8"玩家关桶", "{s:s,s:[f,f,f],s:i,s:[i,i,i],s:i}",
+	CallAll(u8"关闭木桶", "{s:s,s:[f,f,f],s:i,s:[i,i,i],s:i}",
 		"playername", pn,
 		"XYZ", pp->x, pp->y, pp->z,
 		"dimensionid", did,
@@ -660,9 +660,9 @@ THook(void, "?containerContentChanged@LevelContainerModel@@UEAAXH@Z",
 	VA v3 = *((VA*)a1 + 26);	// IDA LevelContainerModel::_getContainer
 	BlockSource* bs = *(BlockSource**)(*(VA*)(v3 + 808) + 72);
 	BlockPos* bp = (BlockPos*)((char*)a1 + 216);
-	Block* b = bs->getBlock(bp);
-	short bid = b->getBlockLegacy()->getBlockItemID();
-	string bn = b->getBlockLegacy()->getBlockName();
+	BlockLegacy* bl = bs->getBlock(bp)->getBlockLegacy();
+	short bid = bl->getBlockItemID();
+	string bn = bl->getBlockName();
 	if (bid == 54 || bid == 130 || bid == 146 || bid == -203 || bid == 205 || bid == 218) {	// 非箱子、桶、潜影盒的情况不作处理
 		VA v5 = (*(VA(**)(LevelContainerModel*))(*(VA*)a1 + 160))(a1);
 		if (v5) {
@@ -670,7 +670,7 @@ THook(void, "?containerContentChanged@LevelContainerModel@@UEAAXH@Z",
 			auto iid = is->getId();
 			auto iaux = is->getAuxValue();
 			auto isize = is->getStackSize();
-			auto iname = string(is->getName());
+			auto iname = is->getName();
 			auto p = a1->getPlayer();
 			getPlayerInfo(p);
 			CallAll(u8"放入取出", "{s:s,s:[f,f,f],s:i,s:s,s:i,s:[i,i,i],s:i,s:i,s:i,s:s,s:i,s:i}",
@@ -683,14 +683,13 @@ THook(void, "?containerContentChanged@LevelContainerModel@@UEAAXH@Z",
 				"isstand", st,
 				"itemid", iid,
 				"itemcount", isize,
-				"itemname", iname,
+				"itemname", iname.c_str(),
 				"itemaux", iaux,
 				"slot", slot
 			);
-			return;
 		}
 	}
-	else original(a1, slot);
+	original(a1, slot);
 }
 // 玩家选择表单
 THook(void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormResponsePacket@@$0A@@@UEBAXAEBVNetworkIdentifier@@AEAVNetEventCallback@@AEAV?$shared_ptr@VPacket@@@std@@@Z",
@@ -892,5 +891,11 @@ THook(void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVComma
 		);
 	}
 	original(_this, id, crp);
+}
+// 爆炸
+THook(bool, "?explode@Level@@QEAAXAEAVBlockSource@@PEAVActor@@AEBVVec3@@M_N3M3@Z",
+	void* _this, BlockSource* bs, Actor* a3, const Vec3 pos, float a5, bool a6, bool a7, float a8, bool a9) {
+
+	return _original();
 }
 #pragma endregion

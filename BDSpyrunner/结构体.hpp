@@ -1,5 +1,6 @@
 #pragma once
 #include "预编译头.h"
+#include <chrono>
 #include "head/Component.h"
 #include "head/json.h"
 #pragma region 方块
@@ -79,29 +80,43 @@ struct CompoundTag {
 struct Item {
 };
 struct ItemStackBase {
-	VA vtable;
-	VA mItem;
-	VA mUserData;
-	VA mBlock;
-	short mAuxValue;
-	char mCount;
-	char mValid;
-	char unk[4]{ 0 };
-	VA mPickupTime;
-	char mShowPickUp;
-	char unk2[7]{ 0 };
-	vector<VA*> mCanPlaceOn;
-	VA mCanPlaceOnHash;
-	vector<VA*> mCanDestroy;
-	VA mCanDestroyHash;
-	VA mBlockingTick;
-	ItemStackBase* mChargedItem;
-	VA uk;
+	//VA vtable;
+	//VA mItem;
+	//VA mUserData;
+	//VA mBlock;
+	//short mAuxValue;
+	//char mCount;
+	//char mValid;
+	//char unk[4]{ 0 };
+	//VA mPickupTime;
+	//char mShowPickUp;
+	//char unk2[7]{ 0 };
+	//vector<VA*> mCanPlaceOn;
+	//VA mCanPlaceOnHash;
+	//vector<VA*> mCanDestroy;
+	//VA mCanDestroyHash;
+	//VA mBlockingTick;
+	//ItemStackBase* mChargedItem;
+	//VA uk;
+	Item* item{};
+	std::unique_ptr<CompoundTag> tag;
+	VA block_state{};
+	uint16_t aux_value{};
+	unsigned char count{};
+	bool flag35{};
+	std::chrono::steady_clock::time_point create_time{};
+	bool flag48{};
+	std::vector<BlockLegacy*> blv56;
+	VA unk80{};
+	std::vector<BlockLegacy*> blv88;
+	VA unk112{};
+	VA blocking_tick;
+	VA instance;
 
 	CompoundTag* getNetworkUserData() {
 		void* a;
 		return SYMCALL<CompoundTag*>("?getNetworkUserData@ItemStackBase@@QEBA?AV?$unique_ptr@VCompoundTag@@U?$default_delete@VCompoundTag@@@std@@@std@@XZ",
-			this,&a);
+			this, &a);
 	}
 	CompoundTag* save() {
 		void* a;
@@ -128,12 +143,12 @@ struct ItemStackBase {
 		SYMCALL<VA>("?fromTag@ItemStack@@SA?AV1@AEBVCompoundTag@@@Z",
 			this, t);
 	}
-	bool getFromId(short id, short aux, char count) {
+	bool getFromId(short id, short aux, char c) {
 		memcpy(this, GetServerSymbol("?EMPTY_ITEM@ItemStack@@2V1@B"), 0x90);
 		bool ret = SYMCALL<bool>("?_setItem@ItemStackBase@@IEAA_NH@Z", this, id);
-		mCount = count;
-		mAuxValue = aux;
-		mValid = true;
+		count = c;
+		aux_value = aux;
+		flag35 = true;
 		return ret;
 	}
 	Item* getItem() {
@@ -146,6 +161,10 @@ struct ItemStackBase {
 	}
 };
 struct ItemStack : ItemStackBase {
+	//ItemStack() {
+	//	printf("ItemStack\n");
+	//	SYMCALL<ItemStack*>("??0ItemStack@@QEAA@XZ", this);
+	//}
 	// 取物品ID
 	short getId() {
 		return SYMCALL<short>("?getId@ItemStackBase@@QEBAFXZ", this);
@@ -190,17 +209,14 @@ struct CommandRequestPacket {
 		return str;
 	}
 };
-struct ModalFormRequestPacket {
-	char filler[0x48];
-};
-struct ModalFormResponsePacket {
+/*struct ModalFormResponsePacket {
 	// 取发起表单ID
-	UINT getFormId() {
-		return *(UINT*)((VA)this + 40);
+	unsigned getFormId() {
+		return *((unsigned*)this + 40);
 	}
 	// 取选择序号
 	string getSelectStr() {
-		string x = *(string*)((VA)this + 48);
+		string x = *((string*)this + 48);
 		VA l = x.length();
 		if (x.c_str()[l - 1] == '\n') {
 			return l > 1 ? x.substr(0, l - 1) :
@@ -208,7 +224,7 @@ struct ModalFormResponsePacket {
 		}
 		return x;
 	}
-};
+};*/
 #pragma endregion
 struct Container {
 	VA vtable;
@@ -362,7 +378,7 @@ struct Player : Mob {
 	}
 	// 获取网络标识符
 	VA getNetId() {
-		return (VA)this + 2432;		// IDA ServerPlayer::setPermissions
+		return (VA)this + 2432;// IDA ServerPlayer::setPermissions
 	}
 	// 获取背包
 	PlayerInventory* getSupplies() {
@@ -377,7 +393,7 @@ struct Player : Mob {
 		return SYMCALL<VA>("?getEnderChestContainer@Player@@QEAAPEAVEnderChestContainer@@XZ", this);
 	}
 	// 设置一个装备
-	VA setArmor(int i, VA item) {
+	VA setArmor(int i, ItemStack* item) {
 		return SYMCALL<VA>("?setArmor@ServerPlayer@@UEAAXW4ArmorSlot@@AEBVItemStack@@@Z", this, i, item);
 	}
 	// 设置副手
@@ -385,7 +401,7 @@ struct Player : Mob {
 		return SYMCALL<VA>("?setOffhandSlot@Player@@UEAAXAEBVItemStack@@@Z", this, item);
 	}
 	// 添加一个物品
-	void addItem(VA item) {
+	void addItem(ItemStack* item) {
 		SYMCALL<VA>("?add@Player@@UEAA_NAEAVItemStack@@@Z", this, item);
 	}
 	// 获取当前选中的框位置
@@ -508,6 +524,9 @@ struct ScoreInfo {
 	}
 };
 struct Objective {
+	unordered_map<ScoreboardId, int> smap;
+	string name, name2;
+	VA Criteria;
 	ScoreInfo* getPlayerScore(ScoreInfo* a1, ScoreboardId* a2) {
 		return SYMCALL<ScoreInfo*>("?getPlayerScore@Objective@@QEBA?AUScoreInfo@@AEBUScoreboardId@@@Z", this, a1, a2);
 	}

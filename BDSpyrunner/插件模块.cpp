@@ -16,8 +16,8 @@
 #define cout(...) cout <<__VA_ARGS__<< endl
 //THook返回判断
 #define RET(...) \
-	if (res) return original(__VA_ARGS__);\
-	else return _original();
+	if (!res) return 0;\
+	return original(__VA_ARGS__)
 //根据Player*获取玩家基本信息
 #define getPlayerInfo(p) \
 	string pn = p->getNameTag();\
@@ -42,13 +42,14 @@ static Scoreboard* scoreboard;//储存计分板名称
 static PyObject* PyInit_mc();
 void init() {
 	cout(u8"[插件]BDSPyrunner加载成功~");
+	unique_ptr<int> i{};
+	cout(sizeof(i));
 	PyPreConfig cfg;
 	PyPreConfig_InitIsolatedConfig(&cfg);
 	cfg.utf8_mode = 1;
 	PyStatus status = Py_PreInitialize(&cfg);
 	if (PyStatus_Exception(status))Py_ExitStatusException(status);
 	PyImport_AppendInittab("mc", &PyInit_mc); //增加一个模块
-	//Py_SetPath(L"./py/python38.zip");
 	Py_Initialize();
 	FILE* f;
 	_finddata64i32_t fileinfo;//用于查找的句柄
@@ -259,10 +260,10 @@ static PyObject* api_getHand(PyObject* self, PyObject* args) {
 	if (PyArg_ParseTuple(args, "s", &uuid)) {
 		Player* p = onlinePlayers[uuid];
 		if (playerSign[p]) {
-			ItemStack* item = p->getSelectedItem();
-			short iaux = item->getAuxValue();
-			short iid = item->getId();
-			string iname = item->getName();
+			ItemStack item;// = p->getSelectedItem();
+			short iaux = item.getAuxValue();
+			short iid = item.getId();
+			string iname = item.getName();
 			return Py_BuildValue("{s:i,s:i,s:s}",
 				"itemid", iid,
 				"itemaux", iaux,
@@ -693,12 +694,13 @@ THook(void, "?containerContentChanged@LevelContainerModel@@UEAAXH@Z",
 }
 // 玩家选择表单
 THook(void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormResponsePacket@@$0A@@@UEBAXAEBVNetworkIdentifier@@AEAVNetEventCallback@@AEAV?$shared_ptr@VPacket@@@std@@@Z",
-	VA _this, VA id, VA handle, ModalFormResponsePacket** fp) {
-	ModalFormResponsePacket* fmp = *fp;
+	VA _this, VA id, VA handle,/*(ModalFormResponsePacket**)*/VA* fp) {
+	VA fmp = *fp;
 	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
 		handle, id, *((char*)fmp + 16));
-	if (p) {
-		unsigned fid = fmp->getFormId();
+	if (checkIsPlayer(p)) {
+		unsigned fid = *((unsigned*)fmp + 40);
+		string x = *((string*)fmp + 48);
 		if (releaseForm(fid)) {
 			getPlayerInfo(p);
 			CallAll(u8"选择表单", "{s:s,s:[f,f,f],s:i,s:i,s:s,s:s,s:i}",
@@ -707,7 +709,7 @@ THook(void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormResponsePacket@
 				"dimensionid", did,
 				"isstand", st,
 				"uuid", p->getUuid().c_str(),
-				"selected", fmp->getSelectStr().c_str(),
+				"selected", x.c_str(),
 				"formid", fid
 			);
 			return;
@@ -751,15 +753,11 @@ THook(bool, "?_playerChangeDimension@Level@@AEAA_NPEAVPlayer@@AEAVChangeDimensio
 }
 // 生物死亡
 THook(void, "?die@Mob@@UEAAXAEBVActorDamageSource@@@Z",
-	Mob* _this, void* dmsg) {
+	Mob* _this, VA dmsg) {
 	PyObject* args = PyDict_New();
 	char v72;
-	VA v0 = (VA)_this;
-	VA v1 = (VA)dmsg;
-	VA v7 = *((VA*)(v0 + 816));
-	VA* srActid = (VA*)(*(VA(__fastcall**)(VA, char*))(*(VA*)v1 + 64))(v1, &v72);
 	Actor* SrAct = SYMCALL<Actor*>("?fetchEntity@Level@@QEBAPEAVActor@@UActorUniqueID@@_N@Z",
-		v7, *srActid, 0);
+		*((VA*)_this + 816), *(VA*)(*(VA(__fastcall**)(VA, char*))(*(VA*)dmsg + 64))(dmsg, &v72), 0);
 	string sr_name = "";
 	string sr_type = "";
 	if (SrAct) {
@@ -794,15 +792,11 @@ THook(void, "?die@Mob@@UEAAXAEBVActorDamageSource@@@Z",
 }
 // 生物受伤
 THook(bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
-	Mob* _this, void* dmsg, int a3, int a4, bool a5) {
+	Mob* _this, VA dmsg, int a3, int a4, bool a5) {
 	PyObject* args = PyDict_New();
 	char v72;
-	VA v0 = (VA)_this;
-	VA v1 = (VA)dmsg;
-	VA v7 = *((VA*)(v0 + 816));
-	VA* srActid = (VA*)(*(VA(__fastcall**)(VA, char*))(*(VA*)v1 + 64))(v1, &v72);
 	Actor* SrAct = SYMCALL<Actor*>("?fetchEntity@Level@@QEBAPEAVActor@@UActorUniqueID@@_N@Z",
-		v7, *srActid, 0);
+		*((VA*)_this + 816), *(VA*)(*(VA(__fastcall**)(VA, char*))(*(VA*)dmsg + 64))(dmsg, &v72), 0);
 	string sr_name = "";
 	string sr_type = "";
 	if (SrAct) {
@@ -894,8 +888,12 @@ THook(void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVComma
 }
 // 爆炸
 THook(bool, "?explode@Level@@QEAAXAEAVBlockSource@@PEAVActor@@AEBVVec3@@M_N3M3@Z",
-	void* _this, BlockSource* bs, Actor* a3, const Vec3 pos, float a5, bool a6, bool a7, float a8, bool a9) {
-
-	return _original();
+	Level* _this, BlockSource* bs, Actor* a3, const Vec3 pos, float a5, bool a6, bool a7, float a8, bool a9) {
+	if (a3) {
+		CallAll(u8"爆炸", "{s:i,s:[f,f,f]}",
+			"power", a5,
+			"XYZ", pos.x, pos.y, pos.z);
+	}
+	return original(_this,bs,a3,pos,a5,a6,a7,a8,a9);
 }
 #pragma endregion

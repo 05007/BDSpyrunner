@@ -191,55 +191,19 @@ struct ItemStackBase {
 };
 struct ItemStack : ItemStackBase {
 };
-#pragma region 包
-struct TextPacket {
-	char filler[0xC8];
-	// 取输入文本
-	string toString() {			// IDA ServerNetworkHandler::handle
-		string str = string(*(string*)((VA)this + 80));
-		return str;
-	}
-};
-struct CommandRequestPacket {
-	char filler[0x90];
-	// 取命令文本
-	string toString() {			// IDA ServerNetworkHandler::handle
-		string str = string(*(string*)((VA)this + 40));
-		return str;
-	}
-};
-/*struct ModalFormResponsePacket {
-	// 取发起表单ID
-	unsigned getFormId() {
-		return *((unsigned*)this + 40);
-	}
-	// 取选择序号
-	string getSelectStr() {
-		string x = *((string*)this + 48);
-		VA l = x.length();
-		if (x.c_str()[l - 1] == '\n') {
-			return l > 1 ? x.substr(0, l - 1) :
-				x;
-		}
-		return x;
-	}
-};*/
-#pragma endregion
+#pragma region Actor
 struct Container {
-	//VA vtable;
 	// 获取容器内所有物品
 	vector<ItemStack*> getSlots() const {
 		//vector<ItemStack*> a;
 		return SYMCALL<vector<ItemStack*>>("?getSlots@Container@@UEBA?BV?$vector@PEBVItemStack@@V?$allocator@PEBVItemStack@@@std@@@std@@XZ",
 			this);
 	}
-	virtual ItemStack const& getItem(int) const = 0;
 };
 struct Actor {
 	// 获取生物名称信息
 	string getNameTag() {
-		return SYMCALL<string&>("?getNameTag@Actor@@UEBAAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
-			this);
+		return SYMCALL<string&>("?getNameTag@Actor@@UEBAAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",this);
 	}
 	// 获取生物当前所处维度ID
 	int getDimensionId() {
@@ -253,8 +217,8 @@ struct Actor {
 		return SYMCALL<Vec3*>("?getPos@Actor@@UEBAAEBVVec3@@XZ", this);
 	}
 	// 是否悬空
-	const BYTE isStand() {				// IDA MovePlayerPacket::MovePlayerPacket
-		return *reinterpret_cast<BYTE*>(reinterpret_cast<VA>(this) + 416);
+	const BYTE isStand() {// IDA MovePlayerPacket::MovePlayerPacket
+		return *((BYTE*)this + 416);
 	}
 	// 取方块源
 	BlockSource* getRegion() {
@@ -355,7 +319,7 @@ struct Player : Mob {
 			this, pkt);
 	}
 	// 根据地图信息获取玩家xuid
-	string& getXuid(VA level) {
+	string& getXuid(Level* level) {
 		return SYMCALL<string&>("?getPlayerXUID@Level@@QEBAAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBVUUID@mce@@@Z",
 			level, (char*)this + 2720);
 	}
@@ -433,6 +397,7 @@ struct Player : Mob {
 			this, target, 0, dim, 0, 0, 0, GetServerSymbol("?INVALID_ID@ActorUniqueID@@2U1@B"));
 	}
 };
+#pragma endregion
 #pragma region 容器
 struct LevelContainerModel {
 	// 取开容者
@@ -522,9 +487,9 @@ struct Objective {
 		return SYMCALL<ScoreInfo*>("?getPlayerScore@Objective@@QEBA?AUScoreInfo@@AEBUScoreboardId@@@Z",
 			this, a1, a2);
 	}
-	ScoreInfo* getPlayerScore(ScoreInfo* a1,PlayerScoreboardId* a2) {
+	ScoreInfo* getPlayerScore(ScoreInfo* a1, PlayerScoreboardId* a2) {
 		return SYMCALL<ScoreInfo*>("?getPlayerScore@Objective@@QEBA?AUScoreInfo@@AEBUScoreboardId@@@Z",
-			this,a1, a2);
+			this, a1, a2);
 	}
 };
 struct IdentityDictionary {
@@ -567,7 +532,7 @@ struct Scoreboard {
 		return SYMCALL<ScoreboardIdentityRef*>("?getScoreboardIdentityRef@Scoreboard@@QEAAPEAVScoreboardIdentityRef@@AEBUScoreboardId@@@Z", this, a2);
 	}
 	//mode:{0:set,1:add,2:remove}
-	int modifyPlayerScore(ScoreboardId* a3, Objective* a4, int count,char mode) {
+	int modifyPlayerScore(ScoreboardId* a3, Objective* a4, int count, char mode) {
 		bool a2 = true;
 		return SYMCALL<int>("?modifyPlayerScore@Scoreboard@@QEAAHAEA_NAEBUScoreboardId@@AEAVObjective@@HW4PlayerScoreSetFunction@@@Z",
 			this, &a2, a3, a4, count, mode);

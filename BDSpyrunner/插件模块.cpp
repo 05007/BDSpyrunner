@@ -12,7 +12,7 @@
 	for (auto & fn :PyFuncs[type]) {							\
 		PyObject* r = PyObject_CallFunction(fn,__VA_ARGS__);\
 		PyErr_Print();int bar = 1;PyArg_Parse(r,"p",&bar);	\
-		if (!bar) res = false;Py_XDECREF(r);				\
+		PyErr_Clear();if (!bar) res = false;Py_XDECREF(r);				\
 	}
 //标准流输出信息
 #define cout(...) cout <<__VA_ARGS__<< endl
@@ -33,10 +33,10 @@ static VA Level_;
 static VA Server_Network_Handle;
 static Scoreboard* Score_Board;//储存计分板名称
 static const VA STD_COUT_HANDLE = *(VA*)GetServerSymbol("__imp_?cout@std@@3V?$basic_ostream@DU?$char_traits@D@std@@@1@A");
+static unsigned FormId = 0;//表单ID
 static unordered_map<string, vector<PyObject*>> PyFuncs;//py函数
 static unordered_map<string, Player*> onlinePlayers;//在线玩家
 static unordered_set<Player*> PlayerList;//玩家列表
-static unordered_map<unsigned, bool> FormId;//表单ID
 static unordered_map<string, string> Command;//注册命令
 #pragma endregion
 #pragma region 函数定义
@@ -58,39 +58,25 @@ static void runcmd(string cmd) {
 	SYMCALL<bool>("??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@AEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
 		Cmd_Queue, cmd);
 }
-// 获取一个未被使用的基于时间秒数的id
+// 获取一个递增的数
 static unsigned getFormId() {
-	unsigned id = (int)time(0) + rand();
-	do {
-		++id;
-	} while (id == 0 || FormId[id]);
-	FormId[id] = true;
-	return id;
+	return ++FormId;
 }
 // 创建数据包
-static inline void cPacket(VA& tpk, int p) {
+static inline void cPacket(VA& pkt, int p) {
 	SYMCALL<VA>("?createPacket@MinecraftPackets@@SA?AV?$shared_ptr@VPacket@@@std@@W4MinecraftPacketIds@@@Z",
-		&tpk, p);
-}
-// 放弃一个表单
-static bool releaseForm(unsigned fid)
-{
-	if (FormId[fid]) {
-		FormId.erase(fid);
-		return true;
-	}
-	return false;
+		&pkt, p);
 }
 // 发送一个表单数据包
 static unsigned sendForm(string uuid, string str) {
 	unsigned fid = getFormId();
 	Player* p = onlinePlayers[uuid];
 	if (PlayerCheck(p)) {
-		VA tpk;//ModalFormRequestPacket
-		cPacket(tpk, 100);
-		*(VA*)(tpk + 40) = fid;
-		*(string*)(tpk + 48) = str;
-		p->sendPacket(tpk);
+		VA pkt;//ModalFormRequestPacket
+		cPacket(pkt, 100);
+		*(VA*)(pkt + 40) = fid;
+		*(string*)(pkt + 48) = str;
+		p->sendPacket(pkt);
 	}
 	return fid;
 }
@@ -98,11 +84,11 @@ static unsigned sendForm(string uuid, string str) {
 static bool transferServer(string uuid, string address, int port) {
 	Player* p = onlinePlayers[uuid];
 	if (PlayerCheck(p)) {
-		VA tpk;//TransferPacket
-		cPacket(tpk, 85);
-		*(string*)(tpk + 40) = address;
-		*(VA*)(tpk + 72) = port;
-		p->sendPacket(tpk);
+		VA pkt;//TransferPacket
+		cPacket(pkt, 85);
+		*(string*)(pkt + 40) = address;
+		*(VA*)(pkt + 72) = port;
+		p->sendPacket(pkt);
 		return true;
 	}
 	return false;
@@ -140,12 +126,12 @@ static void setPlayerScore(string uuid, string n, int count, char mode) {
 static bool sendText(string uuid, string msg, int mode) {
 	Player* p = onlinePlayers[uuid];
 	if (PlayerCheck(p)) {	// IDA ServerNetworkHandler::handle
-		VA tpk;//TextPacket
-		cPacket(tpk, 9);
-		*(char*)(tpk + 40) = mode;
-		*(string*)(tpk + 48) = p->getNameTag();
-		*(string*)(tpk + 80) = msg;
-		p->sendPacket(tpk);
+		VA pkt;//TextPacket
+		cPacket(pkt, 9);
+		*(char*)(pkt + 40) = mode;
+		*(string*)(pkt + 48) = p->getNameTag();
+		*(string*)(pkt + 80) = msg;
+		p->sendPacket(pkt);
 		return true;
 	}
 	return false;
@@ -154,9 +140,9 @@ static bool sendText(string uuid, string msg, int mode) {
 static bool runcmdAs(string uuid, string cmd) {
 	Player* p = onlinePlayers[uuid];
 	if (PlayerCheck(p)) {
-		VA tpk;//CommandRequestPacket
-		cPacket(tpk, 76);
-		*(string*)(tpk + 40) = cmd;
+		VA pkt;//CommandRequestPacket
+		cPacket(pkt, 76);
+		*(string*)(pkt + 40) = cmd;
 		return true;
 	}
 	return false;
@@ -165,16 +151,14 @@ static bool runcmdAs(string uuid, string cmd) {
 static bool setSidebar(string uuid, string title, string name) {
 	Player* p = onlinePlayers[uuid];
 	if (PlayerCheck(p)) {
-		//VA tpk;//setDisplayObjectivePacket
-		//cPacket(tpk, 107);
-		//*(string*)(tpk + 56) = "sidebar";
-		//*(string*)(tpk + 88) = name;
-		//*(string*)(tpk + 120) = title;
-		//*(string*)(tpk + 152) = "dummy";
-		//*(string*)(tpk + 184) = "";
-		//p->sendPacket(tpk);
-		SYMCALL<void>("?setDisplayObjective@Scoreboard@@UEAAPEBVDisplayObjective@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBVObjective@@W4ObjectiveSortOrder@@@Z",
-			title, Score_Board->getObjective(&name), 0);
+		VA pkt;//setDisplayObjectivePacket
+		cPacket(pkt, 107);
+		*(string*)(pkt + 40) = "sidebar";
+		*(string*)(pkt + 72) = name;
+		*(string*)(pkt + 104) = title;
+		*(string*)(pkt + 136) = "dummy";
+		*(char*)(pkt + 168) = 0;
+		p->sendPacket(pkt);
 	}
 	return true;
 }
@@ -208,8 +192,9 @@ static PyObject* api_UUID(PyObject* self, PyObject* args) {
 	if (PyArg_ParseTuple(args, "s", &name))
 		for (Player* p : PlayerList) {
 			if (p->getNameTag() == name)
-				return Py_BuildValue("s", p->getUuid());
+				return Py_BuildValue("s", p->getUuid().c_str());
 		}
+	return Py_None;
 }
 // 设置监听
 static PyObject* api_setListener(PyObject* self, PyObject* args) {
@@ -689,31 +674,6 @@ SYMHOOK(_Slot, void, "?containerContentChanged@LevelContainerModel@@UEAAXH@Z",
 	}
 	original(a1, slot);
 }
-// 玩家选择表单
-SYMHOOK(_SelectedForm, void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormResponsePacket@@$0A@@@UEBAXAEBVNetworkIdentifier@@AEAVNetEventCallback@@AEAV?$shared_ptr@VPacket@@@std@@@Z",
-	VA _this, VA id, VA handle,/*(ModalFormResponsePacket**)*/VA* fp) {
-	VA fmp = *fp;
-	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
-		handle, id, *((char*)fmp + 16));
-	if (PlayerCheck(p)) {
-		unsigned fid = *((unsigned*)fmp + 40);
-		string x = *((string*)fmp + 48);
-		if (releaseForm(fid)) {
-			getPlayerInfo(p);
-			CallAll(u8"选择表单", "{s:s,s:[f,f,f],s:i,s:i,s:s,s:s,s:i}",
-				"playername", pn,
-				"XYZ", pp->x, pp->y, pp->z,
-				"dimensionid", did,
-				"isstand", st,
-				"uuid", p->getUuid().c_str(),
-				"selected", x.c_str(),
-				"formid", fid
-			);
-			return;
-		}
-	}
-	original(_this, id, handle, fp);
-}
 // 玩家攻击
 SYMHOOK(_attack, bool, "?attack@Player@@UEAA_NAEAVActor@@@Z",
 	Player* p, Actor* a) {
@@ -851,16 +811,17 @@ SYMHOOK(_Chat, void, "?fireEventPlayerMessage@MinecraftEventing@@AEAAXAEBV?$basi
 }
 // 玩家输入文本
 SYMHOOK(_InputText, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVTextPacket@@@Z",
-	VA _this, VA id, TextPacket* tp) {
+	VA _this, VA id, /*(TextPacket*)*/VA tp) {
 	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
 		_this, id, *((char*)tp + 16));
 	if (p) {
+		string msg = *(string*)(tp + 80); cout(msg);
 		getPlayerInfo(p);
 		CallAll(u8"输入文本", "{s:s,s:[f,f,f],s:i,s:s,s:i}",
 			"playername", pn,
 			"XYZ", pp->x, pp->y, pp->z,
 			"dimensionid", did,
-			"msg", tp->toString().c_str(),
+			"msg", msg.c_str(),
 			"isstand", st
 		);
 	}
@@ -868,20 +829,49 @@ SYMHOOK(_InputText, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentif
 }
 // 玩家输入指令
 SYMHOOK(_InputCommand, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVCommandRequestPacket@@@Z",
-	VA _this, VA id, CommandRequestPacket* crp) {
+	VA _this, VA id, /*(CommandRequestPacket*)*/VA crp) {
 	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
 		_this, id, *((char*)crp + 16));
 	if (p) {
+		string cmd = *((string*)crp + 40);
 		getPlayerInfo(p);
 		CallAll(u8"输入指令", "{s:s,s:[f,f,f],s:i,s:s,s:i}",
 			"playername", pn,
 			"XYZ", pp->x, pp->y, pp->z,
 			"dimensionid", did,
-			"cmd", crp->toString(),
+			"cmd", cmd.c_str(),
 			"isstand", st
 		);
 	}
 	original(_this, id, crp);
+}
+// 玩家选择表单
+SYMHOOK(_SelectedForm, void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormResponsePacket@@$0A@@@UEBAXAEBVNetworkIdentifier@@AEAVNetEventCallback@@AEAV?$shared_ptr@VPacket@@@std@@@Z",
+	VA _this, VA id, VA handle,/*(ModalFormResponsePacket**)*/VA* fp) {
+	VA fmp = *fp;
+	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
+		handle, id, *((char*)fmp + 16));
+	if (PlayerCheck(p)) {
+		unsigned fid = *((unsigned*)fmp + 40);
+		string x = *((string*)fmp + 48);
+		/*VA l = x.length();
+		if (x.c_str()[l - 1] == '\n') {
+		 l > 1 ? x.substr(0, l - 1) :x;*/
+		if (fid < FormId) {
+			getPlayerInfo(p);
+			CallAll(u8"选择表单", "{s:s,s:[f,f,f],s:i,s:i,s:s,s:s,s:i}",
+				"playername", pn,
+				"XYZ", pp->x, pp->y, pp->z,
+				"dimensionid", did,
+				"isstand", st,
+				"uuid", p->getUuid().c_str(),
+				"selected", x.c_str(),
+				"formid", fid
+			);
+			return;
+		}
+	}
+	original(_this, id, handle, fp);
 }
 // 爆炸
 SYMHOOK(_explode, bool, "?explode@Level@@QEAAXAEAVBlockSource@@PEAVActor@@AEBVVec3@@M_N3M3@Z",

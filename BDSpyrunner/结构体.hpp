@@ -1,5 +1,7 @@
 #pragma once
 #include "预编译头.h"
+#include <vector>
+#include <unordered_map>
 #include <chrono>
 #include "head/Component.h"
 #include "head/json.h"
@@ -80,46 +82,74 @@ struct CompoundTag {
 struct Item {
 };
 struct ItemStackBase {
-	//VA vtable;
-	//VA mItem;
-	//VA mUserData;
-	//VA mBlock;
-	//short mAuxValue;
-	//char mCount;
-	//char mValid;
-	//char unk[4]{ 0 };
-	//VA mPickupTime;
-	//char mShowPickUp;
-	//char unk2[7]{ 0 };
-	//vector<VA*> mCanPlaceOn;
-	//VA mCanPlaceOnHash;
-	//vector<VA*> mCanDestroy;
-	//VA mCanDestroyHash;
-	//VA mBlockingTick;
-	//ItemStackBase* mChargedItem;
-	//VA uk;
-	Item* item{};
-	std::unique_ptr<CompoundTag> tag;
-	VA block_state{};
-	uint16_t aux_value{};
-	unsigned char count{};
-	bool flag35{};
-	std::chrono::steady_clock::time_point create_time{};
-	bool flag48{};
-	std::vector<BlockLegacy*> blv56;
-	VA unk80{};
-	std::vector<BlockLegacy*> blv88;
-	VA unk112{};
-	VA blocking_tick;
-	VA instance;
+	VA vtable;
+	VA mItem;
+	VA mUserData;
+	VA mBlock;
+	short mAuxValue;
+	char mCount;
+	char mValid;
+	char unk[4]{ 0 };
+	VA mPickupTime;
+	char mShowPickUp;
+	char unk2[7]{ 0 };
+	vector<VA*> mCanPlaceOn;
+	VA mCanPlaceOnHash;
+	vector<VA*> mCanDestroy;
+	VA mCanDestroyHash;
+	VA mBlockingTick;
+	ItemStackBase* mChargedItem;
+	VA uk;
 
+	//Item* item{};
+	//std::unique_ptr<CompoundTag> tag;
+	//VA block_state{};
+	//uint16_t aux_value{};
+	//unsigned char count{};
+	//bool flag35{};
+	//std::chrono::steady_clock::time_point create_time{};
+	//bool flag48{};
+	//std::vector<BlockLegacy*> blv56;
+	//VA unk80{};
+	//std::vector<BlockLegacy*> blv88;
+	//VA unk112{};
+	//VA blocking_tick;
+	//VA instance;
+
+	// 取物品ID
+	short getId() {
+		return SYMCALL<short>("?getId@ItemStackBase@@QEBAFXZ", this);
+	}
+	// 取物品特殊值
+	short getAuxValue() {
+		return SYMCALL<short>("?getAuxValue@ItemStackBase@@QEBAFXZ", this);
+	}
+	// 取物品名称
+	string getName() {
+		string str;
+		SYMCALL<__int64>("?getName@ItemStackBase@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
+			this, &str);
+		return str;
+	}
+	// 取容器内数量
+	int getStackSize() {			// IDA ContainerModel::networkUpdateItem
+		return *((char*)this + 34);
+	}
+	// 判断是否空容器
+	bool isNull() {
+		return SYMCALL<bool>("?isNull@ItemStackBase@@QEBA_NXZ", this);
+	}
+	// init
+	void init(int a, int b, short c) {
+		SYMCALL<void>("?init@ItemStackBase@@IEAAXHHH@Z", this, a, b, c);
+	}
 	CompoundTag* getNetworkUserData() {
 		void* a;
 		return SYMCALL<CompoundTag*>("?getNetworkUserData@ItemStackBase@@QEBA?AV?$unique_ptr@VCompoundTag@@U?$default_delete@VCompoundTag@@@std@@@std@@XZ",
 			this, &a);
 	}
 	CompoundTag* save() {
-		void* a;
+		string* a;
 		return SYMCALL<CompoundTag*>("?save@ItemStackBase@@QEBA?AV?$unique_ptr@VCompoundTag@@U?$default_delete@VCompoundTag@@@std@@@std@@XZ",
 			this, &a);
 	}
@@ -140,15 +170,14 @@ struct ItemStackBase {
 	//	delete (VA*)t;
 	//}
 	void fromTag(CompoundTag* t) {
-		SYMCALL<VA>("?fromTag@ItemStack@@SA?AV1@AEBVCompoundTag@@@Z",
-			this, t);
+		SYMCALL<VA>("?fromTag@ItemStack@@SA?AV1@AEBVCompoundTag@@@Z", this, t);
 	}
-	bool getFromId(short id, short aux, char c) {
+	bool getFromId(short id, short aux, char count) {
 		memcpy(this, GetServerSymbol("?EMPTY_ITEM@ItemStack@@2V1@B"), 0x90);
 		bool ret = SYMCALL<bool>("?_setItem@ItemStackBase@@IEAA_NH@Z", this, id);
-		count = c;
-		aux_value = aux;
-		flag35 = true;
+		mCount = count;
+		mAuxValue = aux;
+		mValid = true;
 		return ret;
 	}
 	Item* getItem() {
@@ -161,36 +190,6 @@ struct ItemStackBase {
 	}
 };
 struct ItemStack : ItemStackBase {
-	//ItemStack() {
-	//	printf("ItemStack\n");
-	//	SYMCALL<ItemStack*>("??0ItemStack@@QEAA@XZ", this);
-	//}
-	// 取物品ID
-	short getId() {
-		return SYMCALL<short>("?getId@ItemStackBase@@QEBAFXZ", this);
-	}
-	// 取物品特殊值
-	short getAuxValue() {
-		return SYMCALL<short>("?getAuxValue@ItemStackBase@@QEBAFXZ",
-			this);
-	}
-	// 取物品名称
-	string getName() {
-		string str;
-		SYMCALL<__int64>("?getName@ItemStackBase@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
-			this, &str);
-		return str;
-	}
-	// 取容器内数量
-	int getStackSize() {			// IDA ContainerModel::networkUpdateItem
-		return *((char*)this + 34);
-	}
-	// 判断是否空容器
-	/*bool isNull() {
-		return SYMCALL<bool,
-			MSSYM_B1QA6isNullB1AE13ItemStackBaseB2AAA4QEBAB1UA3NXZ,
-			this);
-	}*/
 };
 #pragma region 包
 struct TextPacket {
@@ -227,26 +226,14 @@ struct CommandRequestPacket {
 };*/
 #pragma endregion
 struct Container {
-	VA vtable;
+	//VA vtable;
 	// 获取容器内所有物品
-	vector<ItemStack*>* getSlots() const {
-		return SYMCALL<vector<ItemStack*>*>("?getSlots@Container@@UEBA?BV?$vector@PEBVItemStack@@V?$allocator@PEBVItemStack@@@std@@@std@@XZ");
+	vector<ItemStack*> getSlots() const {
+		//vector<ItemStack*> a;
+		return SYMCALL<vector<ItemStack*>>("?getSlots@Container@@UEBA?BV?$vector@PEBVItemStack@@V?$allocator@PEBVItemStack@@@std@@@std@@XZ",
+			this);
 	}
-};
-struct PlayerInventory {
-	ItemStack* getItem(int slot)const {
-		return SYMCALL<ItemStack*>("?getItem@PlayerInventory@@QEBAAEBVItemStack@@HW4ContainerID@@@Z",
-			this, slot, 0);
-	}
-	void setItem(ItemStack* is, int slot) {
-		SYMCALL<void>("?setItem@PlayerInventory@@QEAAXHAEBVItemStack@@W4ContainerID@@_N@Z",
-			this, slot, is, 0, 0);
-	}
-	CompoundTag* save() {
-		void* a;
-		return SYMCALL<CompoundTag*>("?save@FillingContainer@@QEAA?AV?$unique_ptr@VListTag@@U?$default_delete@VListTag@@@std@@@std@@XZ",
-			this, &a);
-	}
+	virtual ItemStack const& getItem(int) const = 0;
 };
 struct Actor {
 	// 获取生物名称信息
@@ -357,9 +344,10 @@ struct Mob : Actor {
 struct Player : Mob {
 	// 取uuid
 	string getUuid() {	// IDA ServerNetworkHandler::_createNewPlayer
-		void* p;
-		return SYMCALL<string&>("?asString@UUID@mce@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
+		string p;
+		SYMCALL<string&>("?asString@UUID@mce@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
 			this + 2720, &p);
+		return p;
 	}
 	// 发送数据包
 	void sendPacket(VA pkt) {
@@ -381,8 +369,8 @@ struct Player : Mob {
 		return (VA)this + 2432;// IDA ServerPlayer::setPermissions
 	}
 	// 获取背包
-	PlayerInventory* getSupplies() {
-		return (PlayerInventory*)*((VA*)this + 366);//(Container*)(*((VA*)this + 366) + 176);
+	Container* getContainer() {
+		return (Container*)*(VA*)(*((VA*)this + 366) + 176);
 	}
 
 	VA getContainerManager() {
@@ -402,7 +390,10 @@ struct Player : Mob {
 	}
 	// 添加一个物品
 	void addItem(ItemStack* item) {
-		SYMCALL<VA>("?add@Player@@UEAA_NAEAVItemStack@@@Z", this, item);
+		(*(__int64(__fastcall**)(VA, struct ItemStack*))(**(VA**)(*((VA*)this + 366) + 176i64) + 256i64))(
+			*(VA*)(*((VA*)this + 366) + 176i64),
+			item);
+		//SYMCALL<VA>("?add@Player@@UEAA_NAEAVItemStack@@@Z", this, item);
 	}
 	// 获取当前选中的框位置
 	int getSelectdItemSlot() {			// IDA Player::getSelectedItem
@@ -520,7 +511,7 @@ struct ScoreInfo {
 	// string displayname  +96
 	//string name +64
 	int getCount() {
-		return *(int*)((VA)(this) + 12);
+		return *(int*)(this + 12);
 	}
 };
 struct Objective {
@@ -528,10 +519,12 @@ struct Objective {
 	string name, name2;
 	VA Criteria;
 	ScoreInfo* getPlayerScore(ScoreInfo* a1, ScoreboardId* a2) {
-		return SYMCALL<ScoreInfo*>("?getPlayerScore@Objective@@QEBA?AUScoreInfo@@AEBUScoreboardId@@@Z", this, a1, a2);
+		return SYMCALL<ScoreInfo*>("?getPlayerScore@Objective@@QEBA?AUScoreInfo@@AEBUScoreboardId@@@Z",
+			this, a1, a2);
 	}
-	ScoreInfo* getPlayerScore(ScoreInfo* a1, PlayerScoreboardId* a2) {
-		return SYMCALL<ScoreInfo*>("?getPlayerScore@Objective@@QEBA?AUScoreInfo@@AEBUScoreboardId@@@Z", this, a1, a2);
+	ScoreInfo* getPlayerScore(ScoreInfo* a1,PlayerScoreboardId* a2) {
+		return SYMCALL<ScoreInfo*>("?getPlayerScore@Objective@@QEBA?AUScoreInfo@@AEBUScoreboardId@@@Z",
+			this,a1, a2);
 	}
 };
 struct IdentityDictionary {
@@ -567,15 +560,17 @@ struct Scoreboard {
 	auto getIdentityDictionary() {
 		return (IdentityDictionary*)((char*)this + 80);//gouzaohanshu
 	}
-	auto getScoreboardID(Player* a2) {
+	auto getScoreboardId(Player* a2) {
 		return SYMCALL<PlayerScoreboardId*>("?getScoreboardId@Scoreboard@@QEBAAEBUScoreboardId@@AEBVActor@@@Z", this, a2);
 	}
-	auto getScoreboardIdentityRef(ScoreboardId* a2) {
+	ScoreboardIdentityRef* getScoreboardIdentityRef(ScoreboardId* a2) {
 		return SYMCALL<ScoreboardIdentityRef*>("?getScoreboardIdentityRef@Scoreboard@@QEAAPEAVScoreboardIdentityRef@@AEBUScoreboardId@@@Z", this, a2);
 	}
-	//bool请设置为1; a6=0 set,a6=1,add,a6=2,remove
-	auto modifyPlayerScore(bool* a2, ScoreboardId* a3, Objective* a4, int a5, unsigned __int8 a6) {
-		return SYMCALL<int>("?modifyPlayerScore@Scoreboard@@QEAAHAEA_NAEBUScoreboardId@@AEAVObjective@@HW4PlayerScoreSetFunction@@@Z", this, a2, a3, a4, a5, a6);
+	//mode:{0:set,1:add,2:remove}
+	int modifyPlayerScore(ScoreboardId* a3, Objective* a4, int count,char mode) {
+		bool a2 = true;
+		return SYMCALL<int>("?modifyPlayerScore@Scoreboard@@QEAAHAEA_NAEBUScoreboardId@@AEAVObjective@@HW4PlayerScoreSetFunction@@@Z",
+			this, &a2, a3, a4, count, mode);
 	}
 };
 #pragma endregion

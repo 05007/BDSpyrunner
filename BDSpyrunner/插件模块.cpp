@@ -813,7 +813,7 @@ SYMHOOK(_InputText, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentif
 	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
 		_this, id, *((char*)tp + 16));
 	if (p) {
-		string msg = *(string*)(tp + 80); cout(msg);
+		string msg = *(string*)(tp + 80);
 		getPlayerInfo(p);
 		CallAll(u8"输入文本", "{s:s,s:[f,f,f],s:i,s:s,s:i}",
 			"playername", pn,
@@ -831,7 +831,7 @@ SYMHOOK(_InputCommand, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIden
 	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
 		_this, id, *((char*)crp + 16));
 	if (p) {
-		string cmd = *((string*)crp + 40);
+		string cmd = *(string*)(crp + 40);
 		getPlayerInfo(p);
 		CallAll(u8"输入指令", "{s:s,s:[f,f,f],s:i,s:s,s:i}",
 			"playername", pn,
@@ -875,9 +875,11 @@ SYMHOOK(_SelectedForm, void, "?handle@?$PacketHandlerDispatcherInstance@VModalFo
 SYMHOOK(_explode, bool, "?explode@Level@@QEAAXAEAVBlockSource@@PEAVActor@@AEBVVec3@@M_N3M3@Z",
 	Level* _this, BlockSource* bs, Actor* a3, const Vec3 pos, float a5, bool a6, bool a7, float a8, bool a9) {
 	if (a3) {
-		CallAll(u8"爆炸", "{s:i,s:[f,f,f]}",
+		CallAll(u8"爆炸", "{s:i,s:[f,f,f],s:i}",
 			"power", a5,
-			"XYZ", pos.x, pos.y, pos.z);
+			"XYZ", pos.x, pos.y, pos.z,
+			"dimensionid",a3->getDimensionId()
+		);
 	}
 	return original(_this, bs, a3, pos, a5, a6, a7, a8, a9);
 }

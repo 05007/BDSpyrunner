@@ -2,7 +2,6 @@
 #include "预编译头.h"
 #include <vector>
 #include <unordered_map>
-#include <chrono>
 #include "head/Component.h"
 #include "head/json.h"
 #pragma region 方块
@@ -101,21 +100,7 @@ struct ItemStackBase {
 	ItemStackBase* mChargedItem;
 	VA uk;
 
-	//Item* item{};
-	//std::unique_ptr<CompoundTag> tag;
-	//VA block_state{};
-	//uint16_t aux_value{};
-	//unsigned char count{};
-	//bool flag35{};
-	//std::chrono::steady_clock::time_point create_time{};
-	//bool flag48{};
-	//std::vector<BlockLegacy*> blv56;
-	//VA unk80{};
-	//std::vector<BlockLegacy*> blv88;
-	//VA unk112{};
-	//VA blocking_tick;
-	//VA instance;
-
+	ItemStackBase() {memcpy(this, GetServerSymbol("?EMPTY_ITEM@ItemStack@@2V1@B"), 0x90);}
 	// 取物品ID
 	short getId() {
 		return SYMCALL<short>("?getId@ItemStackBase@@QEBAFXZ", this);
@@ -139,10 +124,6 @@ struct ItemStackBase {
 	bool isNull() {
 		return SYMCALL<bool>("?isNull@ItemStackBase@@QEBA_NXZ", this);
 	}
-	// init
-	void init(int a, int b, short c) {
-		SYMCALL<void>("?init@ItemStackBase@@IEAAXHHH@Z", this, a, b, c);
-	}
 	CompoundTag* getNetworkUserData() {
 		void* a;
 		return SYMCALL<CompoundTag*>("?getNetworkUserData@ItemStackBase@@QEBA?AV?$unique_ptr@VCompoundTag@@U?$default_delete@VCompoundTag@@@std@@@std@@XZ",
@@ -152,6 +133,9 @@ struct ItemStackBase {
 		string* a;
 		return SYMCALL<CompoundTag*>("?save@ItemStackBase@@QEBA?AV?$unique_ptr@VCompoundTag@@U?$default_delete@VCompoundTag@@@std@@@std@@XZ",
 			this, &a);
+	}
+	bool isEmptyStack() {
+		return *((char*)this + 34) == 0;
 	}
 	//Json::Value toJson() {
 	//	VA t = save();
@@ -194,10 +178,9 @@ struct ItemStack : ItemStackBase {
 #pragma region Actor
 struct Container {
 	// 获取容器内所有物品
-	vector<ItemStack*> getSlots() const {
-		//vector<ItemStack*> a;
-		return SYMCALL<vector<ItemStack*>>("?getSlots@Container@@UEBA?BV?$vector@PEBVItemStack@@V?$allocator@PEBVItemStack@@@std@@@std@@XZ",
-			this);
+	VA getSlots(vector<ItemStack*>* s) {
+		return SYMCALL<VA>("?getSlots@Container@@UEBA?BV?$vector@PEBVItemStack@@V?$allocator@PEBVItemStack@@@std@@@std@@XZ",
+			this,s);
 	}
 };
 struct Actor {

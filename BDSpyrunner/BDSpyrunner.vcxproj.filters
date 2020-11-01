@@ -21,7 +21,7 @@
     <Library Include="chakra.lib">
       <Filter>其它文件</Filter>
     </Library>
-    <Library Include="python38.lib">
+    <Library Include="python39.lib">
       <Filter>其它文件</Filter>
     </Library>
   </ItemGroup>

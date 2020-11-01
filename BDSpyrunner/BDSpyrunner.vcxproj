@@ -70,7 +70,7 @@
   </ItemGroup>
   <ItemGroup>
     <Library Include="chakra.lib" />
-    <Library Include="python38.lib" />
+    <Library Include="python39.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

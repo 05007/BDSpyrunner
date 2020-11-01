@@ -3,8 +3,7 @@
 此插件使用了CPython来实现py解释<br>
 参考[http://docs.python.org](http://docs.python.org)<br>
 本插件使用了嵌入式扩展<br>
-在初始化py环境时引入mc模块<br>
-所有接口均在mc模块内
+在初始化解释器时增加`mc`模块<br>
 # 接口说明
 ## 监听器
 设置监听器,执行函数<br>
@@ -44,7 +43,6 @@
 `chakra.dll`(jx写的,BDS进程会调用这个dll,插件需要用到这个里面的函数,因此无论用什么加载器都可以加载)<br>
 `python38.dll`(必须)<br>
 `python38.zip`(如果没有这个插件会在计算机中安装Python的位置寻找,有了就不不需要安装Python)<br>
-[下载链接](https://www.python.org/ftp/python/3.8.6/python-3.8.6-embed-amd64.zip)
 创建py文件夹<br>
 开服即可<br>
 # 更多功能

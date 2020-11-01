@@ -3,17 +3,14 @@
 #include <thread>
 #include <unordered_set>
 #include <unordered_map>
-#define PY_SSIZE_T_CLEAN
-#include "include/Python.h"
+#include "Python/Python.h"
 #pragma region 宏定义
 //调用所有函数
-#define CallAll(type,...)									\
-	bool res = true;										\
-	for (auto & fn :PyFuncs[type]) {							\
-		PyObject* r = PyObject_CallFunction(fn,__VA_ARGS__);\
-		PyErr_Print();int bar = 1;PyArg_Parse(r,"p",&bar);	\
-		PyErr_Clear();if (!bar) res = false;Py_XDECREF(r);				\
-	}
+#define CallAll(type,...)								\
+	bool res = true;									\
+	for (PyObject* fn :PyFuncs[type]) {					\
+		if(PyObject_CallFunction(fn,__VA_ARGS__)==Py_False)res = false;\
+	}PyErr_Print()
 //标准流输出信息
 #define cout(...) cout <<__VA_ARGS__<< endl
 //THook返回判断
@@ -414,7 +411,8 @@ static PyModuleDef mcModule = {
 };
 // 模块初始化函数
 static PyObject* PyInit_mc() {
-	return PyModule_Create(&mcModule);
+	PyObject* m = PyModule_Create(&mcModule);
+	return m;
 }
 #pragma endregion
 #pragma region Hook
@@ -895,13 +893,14 @@ void init() {
 	FILE* f;
 	_finddata64i32_t fileinfo;//用于查找的句柄
 	long long handle = _findfirst64i32("./py/*.py", &fileinfo);
-	do {
-		Py_NewInterpreter();
-		cout(u8"读取Py文件:" << fileinfo.name);
-		string fn = "./py/";
-		fn += fileinfo.name;
-		fopen_s(&f, fn.c_str(), "rb");
-		PyRun_SimpleFileExFlags(f, fileinfo.name, 1, 0);
-	} while (!_findnext64i32(handle, &fileinfo));
-	_findclose(handle);
+	if (handle != -1) {
+		do {
+			Py_NewInterpreter();
+			cout(u8"读取Py文件:" << fileinfo.name);
+			fopen_s(&f, ("./py/" + (string)fileinfo.name).c_str(), "rb");
+			PyRun_SimpleFileExFlags(f, fileinfo.name, 1, 0);
+		} while (!_findnext64i32(handle, &fileinfo));
+		_findclose(handle);
+	}
+	else cout(u8"没有找到目录");
 }

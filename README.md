@@ -39,6 +39,7 @@
 * [x] 玩家攻击
 * [x] 爆炸监听
 # 使用方法
+直接使用bdxc lastest即可<br>
 保证bds根目录有<br>
 `chakra.dll`(jx写的,BDS进程会调用这个dll,插件需要用到这个里面的函数,因此无论用什么加载器都可以加载)<br>
 `python38.dll`(必须)<br>

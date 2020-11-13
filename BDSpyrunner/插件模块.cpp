@@ -1,22 +1,18 @@
 #include "预编译头.h"
 #include "结构体.hpp"
 #include <thread>
-#include <unordered_set>
 #include <unordered_map>
 #include "Python/Python.h"
 #pragma region 宏定义
 //调用所有函数
 #define CallAll(type,...)								\
-	bool res = true;									\
-	for (PyObject* fn :PyFuncs[type]) {					\
-		if(PyObject_CallFunction(fn,__VA_ARGS__)==Py_False)res = false;\
-	}PyErr_Print()
-//标准流输出信息
+bool res = true;									\
+for (PyObject* fn :PyFuncs[type]) {					\
+	if(PyObject_CallFunction(fn,__VA_ARGS__)==Py_False)res = false;\
+}PyErr_Print()
 #define cout(...) cout <<__VA_ARGS__<< endl
 //THook返回判断
-#define RET(...) \
-	if (!res) return 0;\
-	return original(__VA_ARGS__)
+#define RET(...) if (!res) return 0;return original(__VA_ARGS__)
 //根据Player*获取玩家基本信息
 #define getPlayerInfo(p) \
 	string pn = p->getNameTag();\
@@ -33,14 +29,14 @@ static const VA STD_COUT_HANDLE = *(VA*)GetServerSymbol("__imp_?cout@std@@3V?$ba
 static unsigned FormId = 0;//表单ID
 static unordered_map<string, vector<PyObject*>> PyFuncs;//py函数
 static unordered_map<string, Player*> onlinePlayers;//在线玩家
-static unordered_set<Player*> PlayerList;//玩家列表
+static unordered_map<Player*, bool> PlayerList;//玩家列表
 static unordered_map<string, string> Command;//注册命令
 #pragma endregion
 #pragma region 函数定义
 void init();
 // 判断指针是否为玩家列表中指针
 static inline bool PlayerCheck(void* p) {
-	return PlayerList.count((Player*)p);
+	return PlayerList[(Player*)p];
 }
 // 多线程延时
 static void delay(int time, PyObject* func) {
@@ -50,99 +46,10 @@ static void delay(int time, PyObject* func) {
 	else
 		Py_DECREF(func);
 }
-// 执行后端指令
-static void runcmd(string cmd) {
-	SYMCALL<bool>("??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@AEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
-		Cmd_Queue, cmd);
-}
-// 获取一个递增的数
-static unsigned getFormId() {
-	return ++FormId;
-}
 // 创建数据包
 static inline void cPacket(VA& pkt, int p) {
 	SYMCALL<VA>("?createPacket@MinecraftPackets@@SA?AV?$shared_ptr@VPacket@@@std@@W4MinecraftPacketIds@@@Z",
 		&pkt, p);
-}
-// 发送一个表单数据包
-static unsigned sendForm(string uuid, string str) {
-	unsigned fid = getFormId();
-	Player* p = onlinePlayers[uuid];
-	if (PlayerCheck(p)) {
-		VA pkt;//ModalFormRequestPacket
-		cPacket(pkt, 100);
-		*(VA*)(pkt + 40) = fid;
-		*(string*)(pkt + 48) = str;
-		p->sendPacket(pkt);
-	}
-	return fid;
-}
-// 跨服传送
-static bool transferServer(string uuid, string address, int port) {
-	Player* p = onlinePlayers[uuid];
-	if (PlayerCheck(p)) {
-		VA pkt;//TransferPacket
-		cPacket(pkt, 85);
-		*(string*)(pkt + 40) = address;
-		*(VA*)(pkt + 72) = port;
-		p->sendPacket(pkt);
-		return true;
-	}
-	return false;
-}
-// 命令输出
-static void logout(string str) {
-	SYMCALL<VA>("??$_Insert_string@DU?$char_traits@D@std@@_K@std@@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@0@AEAV10@QEBD_K@Z",
-		STD_COUT_HANDLE, str.c_str(), str.length());
-}
-// 获取分数
-static int getPlayerScore(string uuid, string n) {
-	Player* p = onlinePlayers[uuid];
-	if (PlayerCheck(p)) {
-		Objective* testobj = Score_Board->getObjective(&n);
-		if (!testobj) {
-			cout("bad objective:" << n);
-		}
-		ScoreInfo a[2];
-		return testobj->getPlayerScore(a, Score_Board->getScoreboardId(p))->getCount();
-	}
-	return 0;
-}
-// 设置分数
-static void setPlayerScore(string uuid, string n, int count, char mode) {
-	Player* p = onlinePlayers[uuid];
-	if (PlayerCheck(p)) {
-		Objective* obj = Score_Board->getObjective(&n);
-		if (!obj) {
-			cout("bad objective:" << n); return;
-		}
-		Score_Board->modifyPlayerScore((ScoreboardId*)Score_Board->getScoreboardId(p), obj, count, mode);
-	}
-}
-// 模拟玩家发送消息
-static bool sendText(string uuid, string msg, int mode) {
-	Player* p = onlinePlayers[uuid];
-	if (PlayerCheck(p)) {	// IDA ServerNetworkHandler::handle
-		VA pkt;//TextPacket
-		cPacket(pkt, 9);
-		*(char*)(pkt + 40) = mode;
-		*(string*)(pkt + 48) = p->getNameTag();
-		*(string*)(pkt + 80) = msg;
-		p->sendPacket(pkt);
-		return true;
-	}
-	return false;
-}
-// 模拟玩家执行命令
-static bool runcmdAs(string uuid, string cmd) {
-	Player* p = onlinePlayers[uuid];
-	if (PlayerCheck(p)) {
-		VA pkt;//CommandRequestPacket
-		cPacket(pkt, 76);
-		*(string*)(pkt + 40) = cmd;
-		return true;
-	}
-	return false;
 }
 // 设置侧边栏
 static bool setSidebar(string uuid, string title, string name) {
@@ -164,16 +71,22 @@ static bool setSidebar(string uuid, string title, string name) {
 // 指令输出
 static PyObject* api_logout(PyObject* self, PyObject* args) {
 	const char* msg;
-	if (PyArg_ParseTuple(args, "s", &msg))
-		logout(msg);
-	return Py_None;
+	if (PyArg_ParseTuple(args, "s", &msg)) {
+		SYMCALL<VA>("??$_Insert_string@DU?$char_traits@D@std@@_K@std@@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@0@AEAV10@QEBD_K@Z",
+			STD_COUT_HANDLE, msg, strlen(msg));
+		return Py_True;
+	}
+	return Py_False;
 }
 // 执行指令
 static PyObject* api_runcmd(PyObject* self, PyObject* args) {
 	const char* cmd;
-	if (PyArg_ParseTuple(args, "s", &cmd))
-		runcmd(cmd);
-	return Py_None;
+	if (PyArg_ParseTuple(args, "s", &cmd)) {
+		SYMCALL<bool>("??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@AEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
+			Cmd_Queue, (string)cmd);
+		return Py_True;
+	}
+	return Py_False;
 }
 // 延时
 static PyObject* api_setTimeout(PyObject* self, PyObject* args) {
@@ -187,9 +100,9 @@ static PyObject* api_setTimeout(PyObject* self, PyObject* args) {
 static PyObject* api_UUID(PyObject* self, PyObject* args) {
 	const char* name;
 	if (PyArg_ParseTuple(args, "s", &name))
-		for (Player* p : PlayerList) {
-			if (p->getNameTag() == name)
-				return Py_BuildValue("s", p->getUuid().c_str());
+		for (auto p : PlayerList) {
+			if (p.first->getNameTag() == name)
+				return Py_BuildValue("s", p.first->getUuid().c_str());
 		}
 	return Py_None;
 }
@@ -197,16 +110,27 @@ static PyObject* api_UUID(PyObject* self, PyObject* args) {
 static PyObject* api_setListener(PyObject* self, PyObject* args) {
 	const char* m;
 	PyObject* func;
-	if (PyArg_ParseTuple(args, "sO", &m, &func) && PyCallable_Check(func))
+	if (PyArg_ParseTuple(args, "sO", &m, &func) && PyCallable_Check(func)) {
 		PyFuncs[m].push_back(func);
-	return Py_None;
+		return Py_True;
+	}
+	return Py_False;
 }
 // 发送表单
 static PyObject* api_sendForm(PyObject* self, PyObject* args) {
 	const char* uuid;
 	const char* str;
 	if (PyArg_ParseTuple(args, "ss", &uuid, &str)) {
-		return Py_BuildValue("i", sendForm(uuid, str));
+		unsigned fid = FormId++;
+		Player* p = onlinePlayers[uuid];
+		if (PlayerCheck(p)) {
+			VA pkt;//ModalFormRequestPacket
+			cPacket(pkt, 100);
+			*(unsigned*)(pkt + 40) = fid;
+			*(string*)(pkt + 48) = str;
+			p->sendPacket(pkt);
+		}
+		return Py_BuildValue("i", fid);
 	}
 	return Py_None;
 }
@@ -216,9 +140,17 @@ static PyObject* api_transferServer(PyObject* self, PyObject* args) {
 	const char* address;
 	int port;
 	if (PyArg_ParseTuple(args, "ssi", &uuid, &address, &port)) {
-		return Py_BuildValue("i", transferServer(uuid, address, port));
+		Player* p = onlinePlayers[uuid];
+		if (PlayerCheck(p)) {
+			VA pkt;//TransferPacket
+			cPacket(pkt, 85);
+			*(string*)(pkt + 40) = address;
+			*(VA*)(pkt + 72) = port;
+			p->sendPacket(pkt);
+			return Py_True;
+		}
 	}
-	return Py_None;
+	return Py_False;
 }
 // 获取玩家手持
 static PyObject* api_getHand(PyObject* self, PyObject* args) {
@@ -246,13 +178,12 @@ static PyObject* api_getPlayerInfo(PyObject* self, PyObject* args) {
 		Player* p = onlinePlayers[uuid];
 		if (PlayerCheck(p)) {
 			getPlayerInfo(p);
-			float hm, h; p->getHealth(hm, h);
 			return Py_BuildValue("{s:s,s:[f,f,f],s:i,s:i,s:f}",
 				"playername", pn,
 				"XYZ", pp->x, pp->y, pp->z,
 				"dimensionid", did,
 				"isstand", st,
-				"health", h
+				"health", p->getHealth()
 			);
 		}
 	}
@@ -277,9 +208,10 @@ static PyObject* api_setPlayerPerm(PyObject* self, PyObject* args) {
 		Player* p = onlinePlayers[uuid];
 		if (PlayerCheck(p)) {
 			p->setPermissionLevel(lv);
+			return Py_True;
 		}
 	}
-	return Py_None;
+	return Py_False;
 }
 // 增加玩家等级
 static PyObject* api_addLevel(PyObject* self, PyObject* args) {
@@ -289,9 +221,10 @@ static PyObject* api_addLevel(PyObject* self, PyObject* args) {
 		Player* p = onlinePlayers[uuid];
 		if (PlayerCheck(p)) {
 			SYMCALL<void>("?addLevels@Player@@UEAAXH@Z", p, lv);
+			return Py_True;
 		}
 	}
-	return Py_None;
+	return Py_False;
 }
 // 设置玩家名字
 static PyObject* api_setNameTag(PyObject* self, PyObject* args) {
@@ -301,9 +234,10 @@ static PyObject* api_setNameTag(PyObject* self, PyObject* args) {
 		Player* p = onlinePlayers[uuid];
 		if (PlayerCheck(p)) {
 			p->setName(name);
+			return Py_True;
 		}
 	}
-	return Py_None;
+	return Py_False;
 }
 // 设置指令说明
 static PyObject* api_setCommandDescribe(PyObject* self, PyObject* args) {
@@ -311,41 +245,71 @@ static PyObject* api_setCommandDescribe(PyObject* self, PyObject* args) {
 	const char* des;
 	if (PyArg_ParseTuple(args, "ss", &cmd, &des)) {
 		Command[cmd] = des;
+		return Py_True;
 	}
-	return Py_None;
+	return Py_False;
 }
 // 玩家分数
 static PyObject* api_getPlayerScore(PyObject* self, PyObject* args) {
 	const char* uuid, * obj;
 	if (PyArg_ParseTuple(args, "ss", &uuid, &obj)) {
-		return Py_BuildValue("i", getPlayerScore(uuid, obj));
+		Player* p = onlinePlayers[uuid];
+		if (PlayerCheck(p)) {
+			Objective* testobj = Score_Board->getObjective(&(string)obj);
+			if (testobj) {
+				ScoreInfo a[2];
+				return Py_BuildValue("i", testobj->getPlayerScore(a, Score_Board->getScoreboardId(p))->getCount());
+			}
+			cout("bad objective:" << obj);
+		}
 	}
-	return Py_None;
+	return Py_BuildValue("i", 0);
 }
 static PyObject* api_setPlayerScore(PyObject* self, PyObject* args) {
 	const char* uuid, * obj; int count; char mode;
 	if (PyArg_ParseTuple(args, "ssii", &uuid, &obj, &count, &mode)) {
-		setPlayerScore(uuid, obj, count, mode);
+		Player* p = onlinePlayers[uuid];
+		if (PlayerCheck(p)) {
+			Objective* testobj = Score_Board->getObjective(&(string)obj);
+			if (testobj) {
+				Score_Board->modifyPlayerScore((ScoreboardId*)Score_Board->getScoreboardId(p), testobj, count, mode);
+				return Py_True;
+			}
+			else cout("bad objective:" << obj);
+		}
 	}
-	return Py_None;
+	return Py_False;
 }
 // 模拟玩家发送文本
 static PyObject* api_talkAs(PyObject* self, PyObject* args) {
-	const char* uuid;
-	const char* msg;
+	const char* uuid,* msg;
 	if (PyArg_ParseTuple(args, "ss", &uuid, &msg)) {
-		return Py_BuildValue("i", sendText(uuid, msg, 1));
+		Player* p = onlinePlayers[uuid];
+		if (PlayerCheck(p)) {	// IDA ServerNetworkHandler::handle
+			VA pkt;//TextPacket
+			cPacket(pkt, 9);
+			*(char*)(pkt + 40) = 1;
+			*(string*)(pkt + 48) = p->getNameTag();
+			*(string*)(pkt + 80) = msg;
+			p->sendPacket(pkt);
+			return Py_True;
+		}
 	}
-	return Py_None;
+	return Py_False;
 }
 // 模拟玩家执行指令
 static PyObject* api_runcmdAs(PyObject* self, PyObject* args) {
-	const char* uuid;
-	const char* cmd;
+	const char* uuid,* cmd;
 	if (PyArg_ParseTuple(args, "ss", &uuid, &cmd)) {
-		return Py_BuildValue("i", runcmdAs(uuid, cmd));
+		Player* p = onlinePlayers[uuid];
+		if (PlayerCheck(p)) {
+			VA pkt;//CommandRequestPacket
+			cPacket(pkt, 76);
+			*(string*)(pkt + 40) = cmd;
+			return Py_True;
+		}
 	}
-	return Py_None;
+	return Py_False;
 }
 // 传送玩家
 static PyObject* api_teleport(PyObject* self, PyObject* args) {
@@ -353,17 +317,26 @@ static PyObject* api_teleport(PyObject* self, PyObject* args) {
 	if (PyArg_ParseTuple(args, "sfffi", &pn, &x, &y, &z, &did)) {
 		Player* p = onlinePlayers[pn];
 		p->teleport({ x,y,z }, did);
+		return Py_True;
 	}
-	return Py_None;
+	return Py_False;
 }
 // 原始输出
 static PyObject* api_tellraw(PyObject* self, PyObject* args) {
-	const char* uuid;
-	const char* msg;
+	const char* uuid,* msg;
 	if (PyArg_ParseTuple(args, "ss", &uuid, &msg)) {
-		return Py_BuildValue("i", sendText(uuid, msg, 0));
+		Player* p = onlinePlayers[uuid];
+		if (PlayerCheck(p)) {	// IDA ServerNetworkHandler::handle
+			VA pkt;//TextPacket
+			cPacket(pkt, 9);
+			*(char*)(pkt + 40) = 0;
+			*(string*)(pkt + 48) = p->getNameTag();
+			*(string*)(pkt + 80) = msg;
+			p->sendPacket(pkt);
+			return Py_True;
+		}
 	}
-	return Py_None;
+	return Py_False;
 }
 // 设置侧边栏
 static PyObject* api_addItem(PyObject* self, PyObject* args) {
@@ -409,33 +382,24 @@ static PyModuleDef mcModule = {
 	PyModuleDef_HEAD_INIT, "mc", NULL, -1, mcMethods,
 	NULL, NULL, NULL, NULL
 };
-// 模块初始化函数
-static PyObject* PyInit_mc() {
-	PyObject* m = PyModule_Create(&mcModule);
-	return m;
-}
 #pragma endregion
 #pragma region Hook
-// 获取指令队列
-SYMHOOK(_CmdQueue, VA, "??0?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@QEAA@_K@Z",
+SYMHOOK(获取指令队列, VA, "??0?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@QEAA@_K@Z",
 	VA _this) {
 	Cmd_Queue = original(_this);
 	return Cmd_Queue;
 }
-// 获取地图初始化信息
-SYMHOOK(_Level, VA, "??0Level@@QEAA@AEBV?$not_null@V?$NonOwnerPointer@VSoundPlayerInterface@@@Bedrock@@@gsl@@V?$unique_ptr@VLevelStorage@@U?$default_delete@VLevelStorage@@@std@@@std@@V?$unique_ptr@VLevelLooseFileStorage@@U?$default_delete@VLevelLooseFileStorage@@@std@@@4@AEAVIMinecraftEventing@@_NEAEAVScheduler@@AEAVStructureManager@@AEAVResourcePackManager@@AEAVIEntityRegistryOwner@@V?$unique_ptr@VBlockComponentFactory@@U?$default_delete@VBlockComponentFactory@@@std@@@4@V?$unique_ptr@VBlockDefinitionGroup@@U?$default_delete@VBlockDefinitionGroup@@@std@@@4@@Z",
+SYMHOOK(获取地图初始化信息, VA, "??0Level@@QEAA@AEBV?$not_null@V?$NonOwnerPointer@VSoundPlayerInterface@@@Bedrock@@@gsl@@V?$unique_ptr@VLevelStorage@@U?$default_delete@VLevelStorage@@@std@@@std@@V?$unique_ptr@VLevelLooseFileStorage@@U?$default_delete@VLevelLooseFileStorage@@@std@@@4@AEAVIMinecraftEventing@@_NEAEAVScheduler@@AEAVStructureManager@@AEAVResourcePackManager@@AEAVIEntityRegistryOwner@@V?$unique_ptr@VBlockComponentFactory@@U?$default_delete@VBlockComponentFactory@@@std@@@4@V?$unique_ptr@VBlockDefinitionGroup@@U?$default_delete@VBlockDefinitionGroup@@@std@@@4@@Z",
 	VA a1, VA a2, VA a3, VA a4, VA a5, VA a6, VA a7, VA a8, VA a9, VA a10, VA a11, VA a12, VA a13) {
 	Level_ = original(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13);
 	return Level_;
 }
-// 获取游戏初始化时基本信息
-SYMHOOK(_GameSession, VA, "??0GameSession@@QEAA@AEAVNetworkHandler@@V?$unique_ptr@VServerNetworkHandler@@U?$default_delete@VServerNetworkHandler@@@std@@@std@@AEAVLoopbackPacketSender@@V?$unique_ptr@VNetEventCallback@@U?$default_delete@VNetEventCallback@@@std@@@3@V?$unique_ptr@VLevel@@U?$default_delete@VLevel@@@std@@@3@E@Z",
+SYMHOOK(获取游戏初始化信息, VA, "??0GameSession@@QEAA@AEAVNetworkHandler@@V?$unique_ptr@VServerNetworkHandler@@U?$default_delete@VServerNetworkHandler@@@std@@@std@@AEAVLoopbackPacketSender@@V?$unique_ptr@VNetEventCallback@@U?$default_delete@VNetEventCallback@@@std@@@3@V?$unique_ptr@VLevel@@U?$default_delete@VLevel@@@std@@@3@E@Z",
 	void* a1, void* a2, VA* a3, void* a4, void* a5, void* a6, void* a7) {
 	Server_Network_Handle = *a3;
 	return original(a1, a2, a3, a4, a5, a6, a7);
 }
-// 命令注册
-SYMHOOK(_Command, void, "?setup@ChangeSettingCommand@@SAXAEAVCommandRegistry@@@Z",
+SYMHOOK(命令注册, void, "?setup@ChangeSettingCommand@@SAXAEAVCommandRegistry@@@Z",
 	void* _this) {
 	for (pair<const string, string> cmd : Command) {
 		SYMCALL<void>("?registerCommand@CommandRegistry@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PEBDW4CommandPermissionLevel@@UCommandFlag@@3@Z",
@@ -443,14 +407,12 @@ SYMHOOK(_Command, void, "?setup@ChangeSettingCommand@@SAXAEAVCommandRegistry@@@Z
 	}
 	original(_this);
 }
-// 计分板命令注册（开服时获取所有的计分板名称）
-SYMHOOK(_Scoreboard, void*, "??0ServerScoreboard@@QEAA@VCommandSoftEnumRegistry@@PEAVLevelStorage@@@Z",
+SYMHOOK(计分板, void*, "??0ServerScoreboard@@QEAA@VCommandSoftEnumRegistry@@PEAVLevelStorage@@@Z",
 	void* _this, void* a2, void* a3) {
 	Score_Board = (Scoreboard*)original(_this, a2, a3);
 	return Score_Board;
 }
-// 服务器后台指令输出
-SYMHOOK(_logout, VA, "??$_Insert_string@DU?$char_traits@D@std@@_K@std@@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@0@AEAV10@QEBD_K@Z",
+SYMHOOK(后台输出, VA, "??$_Insert_string@DU?$char_traits@D@std@@_K@std@@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@0@AEAV10@QEBD_K@Z",
 	VA handle, const char* str, VA size) {
 	if (handle == STD_COUT_HANDLE) {
 		CallAll(u8"后台输出", "s", str);
@@ -458,8 +420,7 @@ SYMHOOK(_logout, VA, "??$_Insert_string@DU?$char_traits@D@std@@_K@std@@YAAEAV?$b
 	}
 	return original(handle, str, size);
 }
-// 控制台输入
-SYMHOOK(_Input, bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@AEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
+SYMHOOK(控制台输入, bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@AEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
 	VA _this, string* cmd) {
 	if (*cmd == "pyreload") {
 		if (!Py_FinalizeEx()) {
@@ -471,12 +432,11 @@ SYMHOOK(_Input, bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D
 	CallAll(u8"后台输入", "s", *cmd);
 	RET(_this, cmd);
 }
-// 玩家加载名字
-SYMHOOK(_LoadName, VA, "?onPlayerJoined@ServerScoreboard@@UEAAXAEBVPlayer@@@Z",
+SYMHOOK(玩家加入, VA, "?onPlayerJoined@ServerScoreboard@@UEAAXAEBVPlayer@@@Z",
 	VA a1, Player* p) {
 	string uuid = p->getUuid();
 	onlinePlayers[uuid] = p;
-	PlayerList.insert(p);
+	PlayerList[p] = true;
 	getPlayerInfo(p);
 	CallAll(u8"加载名字", "{s:s,s:[f,f,f],s:i,s:i,s:s}",
 		"playername", pn,
@@ -487,8 +447,7 @@ SYMHOOK(_LoadName, VA, "?onPlayerJoined@ServerScoreboard@@UEAAXAEBVPlayer@@@Z",
 	);
 	return original(a1, p);
 }
-// 玩家离开游戏
-SYMHOOK(_PlayerLeft, void, "?_onPlayerLeft@ServerNetworkHandler@@AEAAXPEAVServerPlayer@@_N@Z",
+SYMHOOK(玩家离开游戏, void, "?_onPlayerLeft@ServerNetworkHandler@@AEAAXPEAVServerPlayer@@_N@Z",
 	VA _this, Player* p, char v3) {
 	string uuid = p->getUuid();
 	PlayerList.erase(p);
@@ -503,15 +462,13 @@ SYMHOOK(_PlayerLeft, void, "?_onPlayerLeft@ServerNetworkHandler@@AEAAXPEAVServer
 	);
 	return original(_this, p, v3);
 }
-// 玩家捡起物品
-SYMHOOK(_take, char, "?take@Player@@QEAA_NAEAVActor@@HH@Z",
+SYMHOOK(玩家捡起物品, char, "?take@Player@@QEAA_NAEAVActor@@HH@Z",
 	Player* p, Actor* a, VA a3, VA a4) {
 	//getPlayerInfo(p);
 	//CallAll("Take","");
 	return original(p, a, a3, a4);
 }
-// 玩家操作物品
-SYMHOOK(_useItem, bool, "?useItemOn@GameMode@@UEAA_NAEAVItemStack@@AEBVBlockPos@@EAEBVVec3@@PEBVBlock@@@Z",
+SYMHOOK(玩家操作物品, bool, "?useItemOn@GameMode@@UEAA_NAEAVItemStack@@AEBVBlockPos@@EAEBVVec3@@PEBVBlock@@@Z",
 	void* _this, ItemStack* item, BlockPos* bp, unsigned __int8 a4, void* v5, Block* b) {
 	Player* p = *(Player**)((VA)_this + 8);
 	getPlayerInfo(p);
@@ -535,8 +492,7 @@ SYMHOOK(_useItem, bool, "?useItemOn@GameMode@@UEAA_NAEAVItemStack@@AEBVBlockPos@
 	);
 	RET(_this, item, bp, a4, v5, b);
 }
-// 玩家放置方块
-SYMHOOK(_PlacedBlock, bool, "?mayPlace@BlockSource@@QEAA_NAEBVBlock@@AEBVBlockPos@@EPEAVActor@@_N@Z",
+SYMHOOK(玩家放置方块, bool, "?mayPlace@BlockSource@@QEAA_NAEBVBlock@@AEBVBlockPos@@EPEAVActor@@_N@Z",
 	BlockSource* _this, Block* b, BlockPos* bp, unsigned __int8 a4, Actor* p, bool _bool) {
 	if (p && PlayerCheck(p)) {
 		BlockLegacy* bl = b->getBlockLegacy();
@@ -556,8 +512,7 @@ SYMHOOK(_PlacedBlock, bool, "?mayPlace@BlockSource@@QEAA_NAEBVBlock@@AEBVBlockPo
 	}
 	return original(_this, b, bp, a4, p, _bool);
 }
-// 玩家破坏方块
-SYMHOOK(_DestroyBlock, bool, "?_destroyBlockInternal@GameMode@@AEAA_NAEBVBlockPos@@E@Z",
+SYMHOOK(玩家破坏方块, bool, "?_destroyBlockInternal@GameMode@@AEAA_NAEBVBlockPos@@E@Z",
 	void* _this, BlockPos* bp) {
 	Player* p = *(Player**)((VA)_this + 8);
 	BlockSource* bs = *(BlockSource**)(*((VA*)_this + 1) + 800);
@@ -577,8 +532,7 @@ SYMHOOK(_DestroyBlock, bool, "?_destroyBlockInternal@GameMode@@AEAA_NAEBVBlockPo
 	);
 	RET(_this, bp);
 }
-// 玩家开箱准备
-SYMHOOK(_OpenChest, bool, "?use@ChestBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@@Z",
+SYMHOOK(玩家开箱准备, bool, "?use@ChestBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@@Z",
 	void* _this, Player* p, BlockPos* bp) {
 	getPlayerInfo(p);
 	CallAll(u8"打开箱子", "{s:s,s:[f,f,f],s:i,s:[i,i,i],s:i}",
@@ -590,8 +544,7 @@ SYMHOOK(_OpenChest, bool, "?use@ChestBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@@Z",
 	);
 	RET(_this, p, bp);
 }
-// 玩家开桶准备
-SYMHOOK(_OpenBarrel, bool, "?use@BarrelBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@@Z",
+SYMHOOK(玩家开桶准备, bool, "?use@BarrelBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@@Z",
 	void* _this, Player* p, BlockPos* bp) {
 	getPlayerInfo(p);
 	CallAll(u8"打开木桶", "{s:s,s:[f,f,f],s:i,s:[i,i,i],s:i}",
@@ -603,8 +556,7 @@ SYMHOOK(_OpenBarrel, bool, "?use@BarrelBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@@Z
 	);
 	RET(_this, p, bp);
 }
-// 玩家关闭箱子
-SYMHOOK(_CloseChest, void, "?stopOpen@ChestBlockActor@@UEAAXAEAVPlayer@@@Z",
+SYMHOOK(玩家关闭箱子, void, "?stopOpen@ChestBlockActor@@UEAAXAEAVPlayer@@@Z",
 	void* _this, Player* p) {
 	auto real_this = reinterpret_cast<void*>(reinterpret_cast<VA>(_this) - 248);
 	auto bp = reinterpret_cast<BlockActor*>(real_this)->getPosition();
@@ -620,8 +572,7 @@ SYMHOOK(_CloseChest, void, "?stopOpen@ChestBlockActor@@UEAAXAEAVPlayer@@@Z",
 	);
 	return original(_this, p);
 }
-// 玩家关闭木桶
-SYMHOOK(_CloseBarrel, void, "?stopOpen@BarrelBlockActor@@UEAAXAEAVPlayer@@@Z",
+SYMHOOK(玩家关闭木桶, void, "?stopOpen@BarrelBlockActor@@UEAAXAEAVPlayer@@@Z",
 	void* _this, Player* p) {
 	auto real_this = reinterpret_cast<void*>(reinterpret_cast<VA>(_this) - 248);
 	auto bp = reinterpret_cast<BlockActor*>(real_this)->getPosition();
@@ -635,8 +586,7 @@ SYMHOOK(_CloseBarrel, void, "?stopOpen@BarrelBlockActor@@UEAAXAEAVPlayer@@@Z",
 	);
 	return original(_this, p);
 }
-// 玩家放入取出
-SYMHOOK(_Slot, void, "?containerContentChanged@LevelContainerModel@@UEAAXH@Z",
+SYMHOOK(玩家放入取出, void, "?containerContentChanged@LevelContainerModel@@UEAAXH@Z",
 	LevelContainerModel* a1, VA slot) {
 	VA v3 = *((VA*)a1 + 26);	// IDA LevelContainerModel::_getContainer
 	BlockSource* bs = *(BlockSource**)(*(VA*)(v3 + 808) + 72);
@@ -672,13 +622,10 @@ SYMHOOK(_Slot, void, "?containerContentChanged@LevelContainerModel@@UEAAXH@Z",
 	}
 	original(a1, slot);
 }
-// 玩家攻击
-SYMHOOK(_attack, bool, "?attack@Player@@UEAA_NAEAVActor@@@Z",
+SYMHOOK(玩家攻击, bool, "?attack@Player@@UEAA_NAEAVActor@@@Z",
 	Player* p, Actor* a) {
 	string an = a->getNameTag();
 	string atn = a->getTypeName();
-	float hm, h;
-	a->getHealth(hm, h);
 	getPlayerInfo(p);
 	CallAll(u8"玩家攻击", "{s:s,s:[f,f,f],s:i,s:i,s:s,s:s,s:f}",
 		"playername", pn,
@@ -687,12 +634,11 @@ SYMHOOK(_attack, bool, "?attack@Player@@UEAA_NAEAVActor@@@Z",
 		"isstand", st,
 		"actorname", an.c_str(),
 		"actortype", atn.c_str(),
-		"actorhealth", h
+		"actorhealth", a->getHealth()
 	);
 	RET(p, a);
 }
-// 玩家切换维度
-SYMHOOK(_ChangeDimension, bool, "?_playerChangeDimension@Level@@AEAA_NPEAVPlayer@@AEAVChangeDimensionRequest@@@Z",
+SYMHOOK(玩家切换维度, bool, "?_playerChangeDimension@Level@@AEAA_NPEAVPlayer@@AEAVChangeDimensionRequest@@@Z",
 	void* l, Player* p, void* req) {
 	bool result = original(l, p, req);
 	if (result) {
@@ -706,8 +652,7 @@ SYMHOOK(_ChangeDimension, bool, "?_playerChangeDimension@Level@@AEAA_NPEAVPlayer
 	}
 	return result;
 }
-// 生物死亡
-SYMHOOK(_MobDie, void, "?die@Mob@@UEAAXAEBVActorDamageSource@@@Z",
+SYMHOOK(生物死亡, void, "?die@Mob@@UEAAXAEBVActorDamageSource@@@Z",
 	Mob* _this, VA dmsg) {
 	PyObject* args = PyDict_New();
 	char v72;
@@ -745,8 +690,7 @@ SYMHOOK(_MobDie, void, "?die@Mob@@UEAAXAEBVActorDamageSource@@@Z",
 	Py_DECREF(args);
 	if (res) original(_this, dmsg);
 }
-// 生物受伤
-SYMHOOK(_MobHurt, bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
+SYMHOOK(生物受伤, bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
 	Mob* _this, VA dmsg, int a3, int a4, bool a5) {
 	PyObject* args = PyDict_New();
 	char v72;
@@ -784,8 +728,7 @@ SYMHOOK(_MobHurt, bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
 	Py_DECREF(args);
 	RET(_this, dmsg, a3, a4, a5);
 }
-// 玩家重生
-SYMHOOK(_respawn, void, "?respawn@Player@@UEAAXXZ",
+SYMHOOK(玩家重生, void, "?respawn@Player@@UEAAXXZ",
 	Player* p) {
 	getPlayerInfo(p);
 	CallAll(u8"玩家重生", "{s:s,s:[f,f,f],s:i,s:i}",
@@ -796,8 +739,7 @@ SYMHOOK(_respawn, void, "?respawn@Player@@UEAAXXZ",
 	);
 	original(p);
 }
-// 聊天消息
-SYMHOOK(_Chat, void, "?fireEventPlayerMessage@MinecraftEventing@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@000@Z",
+SYMHOOK(聊天消息, void, "?fireEventPlayerMessage@MinecraftEventing@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@000@Z",
 	void* _this, string& sender, string& target, string& msg, string& style) {
 	CallAll(u8"聊天消息", "{s:s,s:s,s:s,s:s}",
 		"sender", sender,
@@ -807,8 +749,7 @@ SYMHOOK(_Chat, void, "?fireEventPlayerMessage@MinecraftEventing@@AEAAXAEBV?$basi
 	);
 	original(_this, sender, target, msg, style);
 }
-// 玩家输入文本
-SYMHOOK(_InputText, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVTextPacket@@@Z",
+SYMHOOK(玩家输入文本, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVTextPacket@@@Z",
 	VA _this, VA id, /*(TextPacket*)*/VA tp) {
 	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
 		_this, id, *((char*)tp + 16));
@@ -822,11 +763,10 @@ SYMHOOK(_InputText, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentif
 			"msg", msg.c_str(),
 			"isstand", st
 		);
+		if (res)original(_this, id, tp);
 	}
-	original(_this, id, tp);
 }
-// 玩家输入指令
-SYMHOOK(_InputCommand, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVCommandRequestPacket@@@Z",
+SYMHOOK(玩家输入指令, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVCommandRequestPacket@@@Z",
 	VA _this, VA id, /*(CommandRequestPacket*)*/VA crp) {
 	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
 		_this, id, *((char*)crp + 16));
@@ -840,45 +780,38 @@ SYMHOOK(_InputCommand, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIden
 			"cmd", cmd.c_str(),
 			"isstand", st
 		);
+		if (res)original(_this, id, crp);
 	}
-	original(_this, id, crp);
 }
-// 玩家选择表单
-SYMHOOK(_SelectedForm, void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormResponsePacket@@$0A@@@UEBAXAEBVNetworkIdentifier@@AEAVNetEventCallback@@AEAV?$shared_ptr@VPacket@@@std@@@Z",
+SYMHOOK(玩家选择表单, void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormResponsePacket@@$0A@@@UEBAXAEBVNetworkIdentifier@@AEAVNetEventCallback@@AEAV?$shared_ptr@VPacket@@@std@@@Z",
 	VA _this, VA id, VA handle,/*(ModalFormResponsePacket**)*/VA* fp) {
 	VA fmp = *fp;
 	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
 		handle, id, *((char*)fmp + 16));
 	if (PlayerCheck(p)) {
-		unsigned fid = *((unsigned*)fmp + 40);
-		string x = *((string*)fmp + 48);
-		/*VA l = x.length();
-		if (x.c_str()[l - 1] == '\n') {
-		 l > 1 ? x.substr(0, l - 1) :x;*/
-		if (fid < FormId) {
-			getPlayerInfo(p);
-			CallAll(u8"选择表单", "{s:s,s:[f,f,f],s:i,s:i,s:s,s:s,s:i}",
-				"playername", pn,
-				"XYZ", pp->x, pp->y, pp->z,
-				"dimensionid", did,
-				"isstand", st,
-				"uuid", p->getUuid().c_str(),
-				"selected", x.c_str(),
-				"formid", fid
-			);
-			return;
-		}
+		unsigned fid = fetch(unsigned, fmp + 40);
+		string x = *(string*)(fmp + 48);
+		if (x[x.length() - 1] == '\n')x[x.length() - 1] = '\0';
+		getPlayerInfo(p);
+		CallAll(u8"选择表单", "{s:s,s:[f,f,f],s:i,s:i,s:s,s:s,s:i}",
+			"playername", pn,
+			"XYZ", pp->x, pp->y, pp->z,
+			"dimensionid", did,
+			"isstand", st,
+			"uuid", p->getUuid().c_str(),
+			"selected", x.c_str(),
+			"formid", fid
+		);
 	}
 	original(_this, id, handle, fp);
 }
-// 爆炸
-SYMHOOK(_explode, bool, "?explode@Level@@QEAAXAEAVBlockSource@@PEAVActor@@AEBVVec3@@M_N3M3@Z",
+SYMHOOK(爆炸, bool, "?explode@Level@@QEAAXAEAVBlockSource@@PEAVActor@@AEBVVec3@@M_N3M3@Z",
 	Level* _this, BlockSource* bs, Actor* a3, const Vec3 pos, float a5, bool a6, bool a7, float a8, bool a9) {
 	if (a3) {
 		CallAll(u8"爆炸", "{s:i,s:[f,f,f],s:i}",
 			"power", a5,
 			"XYZ", pos.x, pos.y, pos.z,
-			"dimensionid",a3->getDimensionId()
+			"dimensionid", a3->getDimensionId()
 		);
 	}
 	return original(_this, bs, a3, pos, a5, a6, a7, a8, a9);
@@ -890,7 +823,7 @@ void init() {
 	PyPreConfig cfg;
 	PyPreConfig_InitIsolatedConfig(&cfg);
 	Py_PreInitialize(&cfg);
-	PyImport_AppendInittab("mc", &PyInit_mc); //增加一个模块
+	PyImport_AppendInittab("mc", []() {return PyModule_Create(&mcModule); }); //增加一个模块
 	Py_Initialize();
 	FILE* f;
 	_finddata64i32_t fileinfo;//用于查找的句柄

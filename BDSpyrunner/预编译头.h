@@ -9,13 +9,10 @@ extern "C" {
 	_declspec(dllimport) void* GetServerSymbol(char const* name);
 }
 template<typename ret, typename... Args>
-inline ret SYMCALL(const char* fn, Args... args) {
+static inline ret SYMCALL(const char* fn, Args... args) {
 	return ((ret(*)(Args...))GetServerSymbol(fn))(args...);
 }
 struct HookRegister {
-	HookRegister(void* address, void* hook, void** org) {
-		if (HookFunction(address, org, hook) != 0) printf("FailedToHook: %p\n", address);
-	}
 	HookRegister(char const* sym, void* hook, void** org) {
 		auto found = GetServerSymbol(sym);
 		if (found == nullptr) printf("FailedToHook: %p\n", sym);
@@ -24,9 +21,9 @@ struct HookRegister {
 };
 #define SYMHOOK(name,ret,sym,...)				\
 struct name {									\
-	typedef ret(*original_type)(__VA_ARGS__);	\
-	static original_type& _original() {			\
-		static original_type storage;			\
+	typedef ret(*func)(__VA_ARGS__);	\
+	static func& _original() {			\
+		static func storage = nullptr;			\
 		return storage;							\
 	}											\
 	template <typename... T>					\

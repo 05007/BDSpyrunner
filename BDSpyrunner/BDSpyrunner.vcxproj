@@ -60,7 +60,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="结构体.hpp" />
-    <ClInclude Include="预编译头.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="插件模块.cpp" />

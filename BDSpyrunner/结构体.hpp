@@ -3,8 +3,9 @@
 #include <vector>
 #include <unordered_map>
 #include "head/Component.h"
-#include "head/json.h"
+//#include "head/ArduinoJson.h"
 #define fetch(type,ptr) *(type*)(ptr)
+using namespace std;
 #pragma region ·½¿é
 struct BlockLegacy {
 	string getBlockName() {
@@ -74,7 +75,7 @@ struct MobEffectInstance {
 };
 struct CompoundTag {
 	string toString() {
-		void* a;
+		string a;
 		return SYMCALL<string&>("?toString@CompoundTag@@UEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
 			this, &a);
 	}
@@ -169,7 +170,7 @@ struct ItemStackBase {
 		return SYMCALL<Item*>("?getItem@ItemStackBase@@QEBAPEBVItem@@XZ", this);
 	}
 	string toString() {
-		void* a;
+		string a;
 		return SYMCALL<string&>("?toString@ItemStackBase@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
 			this, &a);
 	}
@@ -249,6 +250,7 @@ struct Actor {
 				return fetch(float, hattr + 33);
 			}
 		}
+		return 0;
 	}
 	bool setHealth(float& value, float& max) {
 		VA bpattrmap = ((VA*)this)[135];
@@ -448,7 +450,7 @@ struct PlayerScore {
 	//*((_QWORD*)this + 1) = *((_QWORD*)a2 + 1);
 	// *((_DWORD *)this + 4) = int;
 	VA getscore() {
-		return fetch(VA,this + 4);
+		return fetch(VA, this + 4);
 	}
 };
 struct ScoreInfo {
@@ -457,7 +459,7 @@ struct ScoreInfo {
 	// string displayname  +96
 	//string name +64
 	int getCount() {
-		return fetch(int,this + 12);
+		return fetch(int, this + 12);
 	}
 };
 struct Objective {
@@ -485,12 +487,12 @@ struct ScoreboardIdentityRef {
 		int v25 = 0;
 		//int nums = static_cast<int>(num);
 		return SYMCALL<bool>("?modifyScoreInObjective@ScoreboardIdentityRef@@QEAA_NAEAHAEAVObjective@@HW4PlayerScoreSetFunction@@@Z",
-		this, &v25, obj, num, setfun);
+			this, &v25, obj, num, setfun);
 	}
 };
 struct Scoreboard {
-	auto getObjective(string* str) {
-		return SYMCALL<Objective*>("?getObjective@Scoreboard@@QEBAPEAVObjective@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z", this, str);
+	auto getObjective(string str) {
+		return SYMCALL<Objective*>("?getObjective@Scoreboard@@QEBAPEAVObjective@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z", this, &str);
 	}
 	auto getScoreboardId(string* str) {
 		return SYMCALL<ScoreboardId*>("?getScoreboardId@Scoreboard@@QEBAAEBUScoreboardId@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z", this, str);

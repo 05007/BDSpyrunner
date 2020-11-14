@@ -39,12 +39,6 @@
 * [x] 玩家攻击
 * [x] 爆炸监听
 # 使用方法
-直接使用bdxc lastest即可<br>
-保证bds根目录有<br>
-`chakra.dll`(jx写的,BDS进程会调用这个dll,插件需要用到这个里面的函数,因此无论用什么加载器都可以加载)<br>
-`python38.dll`(必须)<br>
-`python38.zip`(如果没有这个插件会在计算机中安装Python的位置寻找,有了就不不需要安装Python)<br>
-创建py文件夹<br>
-开服即可<br>
+见[帮助](帮助.txt)
 # 更多功能
 控制台输入`pyreload`可以重载插件

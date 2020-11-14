@@ -2,42 +2,37 @@
 #include "预编译头.h"
 #include <vector>
 #include <unordered_map>
-#include "head/Component.h"
-//#include "head/ArduinoJson.h"
-#define fetch(type,ptr) *(type*)(ptr)
+#include "head/ArduinoJson.h"
+#define f(type,ptr) (*reinterpret_cast<type*>(ptr))
 using namespace std;
 #pragma region 方块
 struct BlockLegacy {
 	string getBlockName() {
-		return fetch(string, this + 112);
+		return f(string, this + 112);
 	}
-	// 获取方块ID号
 	short getBlockItemID() {	// IDA VanillaItems::initCreativeItemsCallback Item::beginCreativeGroup "itemGroup.name.planks"
-		short v3 = fetch(short, this + 268);
+		short v3 = f(short, this + 268);
 		if (v3 < 0x100) {
 			return v3;
 		}
 		return (short)(255 - v3);
 	}
-
 };
 struct Block {
 	BlockLegacy* getBlockLegacy() {
-		return SYMCALL<BlockLegacy*>("?getLegacyBlock@Block@@QEBAAEBVBlockLegacy@@XZ",
-			this);
+		return SYMCALL<BlockLegacy*>("?getLegacyBlock@Block@@QEBAAEBVBlockLegacy@@XZ", this);
 	}
 };
 struct BlockPos {
-	int x, y, z;
+	int x = 0, y = 0, z = 0;
 };
 struct BlockActor {
-	// 取方块
 	Block* getBlock() {
-		return fetch(Block*, this + 16);
+		return f(Block*, this + 16);
 	}
 	// 取方块位置
 	BlockPos* getPosition() {				// IDA BlockActor::BlockActor
-		return fetch(BlockPos*, this + 44);
+		return f(BlockPos*, this + 44);
 	}
 };
 struct BlockSource {
@@ -47,32 +42,14 @@ struct BlockSource {
 	}
 };
 #pragma endregion
-struct Dimension {
-	// 获取方块源
-	VA getBlockSouce() {// IDA Level::tickEntities
-		return fetch(VA, this + 9);
-	}
-};
-struct Level {
-	// 获取维度
-	Dimension* getDimension(int did) {
-		return SYMCALL<Dimension*>("?getDimension@Level@@QEBAPEAVDimension@@V?$AutomaticID@VDimension@@H@@@Z",
-			this, did);
-	}
-	// 获取计分板
-	VA getScoreBoard() {				// IDA Level::removeEntityReferences
-		return fetch(VA, this + 8280);
-	}
-};
+struct Level {};
 struct Vec3 {
-	float x, y, z;
+	float x = 0.0f, y = 0.0f, z = 0.0f;
 };
 struct Vec2 {
-	float x, y;
+	float x = 0.0f, y = 0.0f;
 };
-struct MobEffectInstance {
-	char fill[0x1C];
-};
+struct MobEffectInstance { char fill[0x1C]; };
 struct CompoundTag {
 	string toString() {
 		string a;
@@ -80,8 +57,7 @@ struct CompoundTag {
 			this, &a);
 	}
 };
-struct Item {
-};
+struct Item;
 struct ItemStackBase {
 	VA vtable;
 	VA mItem;
@@ -102,7 +78,7 @@ struct ItemStackBase {
 	ItemStackBase* mChargedItem;
 	VA uk;
 
-	ItemStackBase() { memcpy(this, GetServerSymbol("?EMPTY_ITEM@ItemStack@@2V1@B"), 0x90); }
+	//ItemStackBase() { memcpy(this, GetServerSymbol("?EMPTY_ITEM@ItemStack@@2V1@B"), 0x90); }
 	// 取物品ID
 	short getId() {
 		return SYMCALL<short>("?getId@ItemStackBase@@QEBAFXZ", this);
@@ -120,7 +96,7 @@ struct ItemStackBase {
 	}
 	// 取容器内数量
 	int getStackSize() {			// IDA ContainerModel::networkUpdateItem
-		return fetch(int, this + 34);
+		return f(int, this + 34);
 	}
 	// 判断是否空容器
 	bool isNull() {
@@ -132,12 +108,12 @@ struct ItemStackBase {
 			this, &a);
 	}
 	CompoundTag* save() {
-		string* a;
+		VA* cp = new VA[8]{ 0 };
 		return SYMCALL<CompoundTag*>("?save@ItemStackBase@@QEBA?AV?$unique_ptr@VCompoundTag@@U?$default_delete@VCompoundTag@@@std@@@std@@XZ",
-			this, &a);
+			this, cp);
 	}
 	bool isEmptyStack() {
-		return fetch(char, this + 34) == 0;
+		return f(char, this + 34) == 0;
 	}
 	//Json::Value toJson() {
 	//	VA t = save();
@@ -177,14 +153,15 @@ struct ItemStackBase {
 };
 struct ItemStack : ItemStackBase {
 };
-#pragma region Actor
 struct Container {
 	// 获取容器内所有物品
-	VA getSlots(vector<ItemStack*>* s) {
-		return SYMCALL<VA>("?getSlots@Container@@UEBA?BV?$vector@PEBVItemStack@@V?$allocator@PEBVItemStack@@@std@@@std@@XZ",
-			this, s);
+	auto getSlots() {
+		vector<ItemStack*> s;
+		return SYMCALL<vector<ItemStack*>*>("?getSlots@Container@@UEBA?BV?$vector@PEBVItemStack@@V?$allocator@PEBVItemStack@@@std@@@std@@XZ",
+			this, &s);
 	}
 };
+#pragma region Actor
 struct Actor {
 	// 获取生物名称信息
 	string getNameTag() {
@@ -203,11 +180,11 @@ struct Actor {
 	}
 	// 是否悬空
 	bool isStand() {// IDA MovePlayerPacket::MovePlayerPacket
-		return fetch(bool, this + 416);
+		return f(bool, this + 416);
 	}
 	// 取方块源
 	BlockSource* getRegion() {
-		return fetch(BlockSource*, this + 3312);
+		return f(BlockSource*, this + 3312);
 	}
 	// 获取生物类型
 	string getTypeName() {
@@ -242,12 +219,12 @@ struct Actor {
 	}
 	// 获取生命值
 	float getHealth() {
-		VA bpattrmap = fetch(VA, this + 135);// IDA ScriptHealthComponent::retrieveComponentFrom
+		VA bpattrmap = f(VA, this + 135);// IDA ScriptHealthComponent::retrieveComponentFrom
 		if (bpattrmap) {
 			VA hattr = SYMCALL<VA>("?getMutableInstance@BaseAttributeMap@@QEAAPEAVAttributeInstance@@I@Z",
 				bpattrmap, 7);//SYM_OBJECT(UINT32, 0x019700B8 + 4));// SharedAttributes::HEALTH
 			if (hattr) {
-				return fetch(float, hattr + 33);
+				return f(float, hattr + 33);
 			}
 		}
 		return 0;
@@ -258,8 +235,8 @@ struct Actor {
 			VA hattr = SYMCALL<VA>("?getMutableInstance@BaseAttributeMap@@QEAAPEAVAttributeInstance@@I@Z",
 				bpattrmap, 7);// SYM_OBJECT(UINT32, 0x019700B8 + 4));// SharedAttributes::HEALTH
 			if (hattr) {
-				fetch(float, hattr + 33) = value;
-				fetch(float, hattr + 32) = max;
+				f(float, hattr + 33) = value;
+				f(float, hattr + 32) = max;
 				SYMCALL<VA>("?_setDirty@AttributeInstance@@AEAAXXZ", hattr);
 				return true;
 			}
@@ -269,7 +246,7 @@ struct Actor {
 };
 struct Mob : Actor {
 	// 获取状态列表
-	vector<MobEffectInstance>* getEffects() {					// IDA Mob::addAdditionalSaveData
+	auto getEffects() {	// IDA Mob::addAdditionalSaveData
 		return (vector<MobEffectInstance>*)((VA*)this + 152);
 	}
 	// 获取装备容器
@@ -287,7 +264,7 @@ struct Mob : Actor {
 	}
 	// 获取地图信息
 	VA getLevel() {					// IDA Mob::die
-		return fetch(VA, this + 816);
+		return f(VA, this + 816);
 	}
 };
 struct Player : Mob {
@@ -319,7 +296,7 @@ struct Player : Mob {
 	}
 	// 获取背包
 	Container* getContainer() {
-		return (Container*)fetch(VA, fetch(VA, this + 366) + 176);
+		return (Container*)f(VA, f(VA, this + 366) + 176);
 	}
 	VA getContainerManager() {
 		return (VA)this + 2912;		// IDA Player::setContainerManager
@@ -338,14 +315,14 @@ struct Player : Mob {
 	}
 	// 添加一个物品
 	void addItem(ItemStack* item) {
-		(*(__int64(__fastcall**)(VA, struct ItemStack*))(*fetch(VA*, fetch(VA, this + 366) + 176) + 256))(
-			fetch(VA, fetch(VA, this + 366) + 176),
+		(*(__int64(__fastcall**)(VA, struct ItemStack*))(*f(VA*, f(VA, this + 366) + 176) + 256))(
+			f(VA, f(VA, this + 366) + 176),
 			item);
 		//SYMCALL<VA>("?add@Player@@UEAA_NAEAVItemStack@@@Z", this, item);
 	}
 	// 获取当前选中的框位置
 	int getSelectdItemSlot() {			// IDA Player::getSelectedItem
-		return fetch(unsigned, fetch(VA, this + 366) + 16);
+		return f(unsigned, f(VA, this + 366) + 16);
 	}
 	// 获取当前物品
 	ItemStack* getSelectedItem() {
@@ -353,7 +330,7 @@ struct Player : Mob {
 	}
 	// 获取游戏时命令权限
 	char getPermission() {						// IDA ServerPlayer::setPermissions
-		return *fetch(char*, this + 2112);
+		return *f(char*, this + 2112);
 	}
 	// 设置游戏时命令权限
 	void setPermission(char m) {
@@ -362,7 +339,7 @@ struct Player : Mob {
 	}
 	// 获取游戏时游玩权限
 	char getPermissionLevel() {		// IDA Abilities::setPlayerPermissions
-		return fetch(char, fetch(char*, this + 2112) + 1);
+		return f(char, f(char*, this + 2112) + 1);
 	}
 	// 设置游戏时游玩权限
 	void setPermissionLevel(char m) {
@@ -381,76 +358,12 @@ struct Player : Mob {
 	}
 };
 #pragma endregion
-#pragma region 容器
-struct LevelContainerModel {
-	// 取开容者
-	Player* getPlayer() {
-		return ((Player**)this)[26];
-	}
-};
-struct SimpleContainer : Container {
-	// 获取一个指定框内物品
-	ItemStack* getItem(int slot) {
-		return SYMCALL<ItemStack*>("?getItem@SimpleContainer@@UEBAAEBVItemStack@@H@Z", this, slot);
-	}
-	// 设置一个指定框内的物品
-	VA setItem(int slot, ItemStack* item) {
-		return SYMCALL<VA>("?setItem@SimpleContainer@@UEAAXHAEBVItemStack@@@Z",
-			this, slot, item);
-	}
-};
-struct FillingContainer : Container {
-	// 格式化容器所有物品至tag
-	VA save(VA tag) {
-		return SYMCALL<VA>("?save@FillingContainer@@QEAA?AV?$unique_ptr@VListTag@@U?$default_delete@VListTag@@@std@@@std@@XZ",
-			this, tag);
-	}
-	// 设置容器中指定位置的物品
-	VA setItem(int i, VA item) {
-		return SYMCALL<VA>("?setItem@FillingContainer@@UEAAXHAEBVItemStack@@@Z",
-			this, i, item);
-	}
-};
-struct IContainerManager {
-	VA vtable;
-};
-struct PlayerInventoryProxy {
-	VA vtable;
-	VA vtable2;
-	int mSelected;
-	char uk1[4];
-	ItemStack mInfiniteItem;
-	char mSelectedContainerId;
-	char uk2[7];
-	VA mInventory;
-	vector<ItemStack> mComplexItems;
-	weak_ptr<VA> mHudContainerManager;
-};
-struct ContainerItemStack
-	:ItemStack {
-
-};
-struct ContainerManagerModel {
-	// 取开容者
-	Player* getPlayer() {				// IDA ContainerManagerModel::ContainerManagerModel
-		return *reinterpret_cast<Player**>(reinterpret_cast<VA>(this) + 8);
-	}
-};
-struct LevelContainerManagerModel
-	:ContainerManagerModel {
-};
-#pragma endregion
 #pragma region 计分板
-struct ScoreboardId {
-};
-struct PlayerScoreboardId {
-};
+struct ScoreboardId {};
+struct PlayerScoreboardId :ScoreboardId {};
 struct PlayerScore {
-	//  *(_QWORD *)this = *(_QWORD *)a2;//ScoreboardId *a2
-	//*((_QWORD*)this + 1) = *((_QWORD*)a2 + 1);
-	// *((_DWORD *)this + 4) = int;
 	VA getscore() {
-		return fetch(VA, this + 4);
+		return f(VA, this + 4);
 	}
 };
 struct ScoreInfo {
@@ -459,13 +372,10 @@ struct ScoreInfo {
 	// string displayname  +96
 	//string name +64
 	int getCount() {
-		return fetch(int, this + 12);
+		return f(int, this + 12);
 	}
 };
 struct Objective {
-	unordered_map<ScoreboardId, int> smap;
-	string name, name2;
-	VA Criteria;
 	ScoreInfo* getPlayerScore(ScoreInfo* a1, ScoreboardId* a2) {
 		return SYMCALL<ScoreInfo*>("?getPlayerScore@Objective@@QEBA?AUScoreInfo@@AEBUScoreboardId@@@Z",
 			this, a1, a2);

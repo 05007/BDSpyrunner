@@ -9,27 +9,19 @@ extern "C" {
 	_declspec(dllimport) void* GetServerSymbol(char const* name);
 }
 template<typename ret, typename... Args>
-static inline ret SYMCALL(const char* fn, Args... args) {
-	return ((ret(*)(Args...))GetServerSymbol(fn))(args...);
-}
+static inline ret SYMCALL(const char* fn, Args... args) { return ((ret(*)(Args...))GetServerSymbol(fn))(args...); }
 struct HookRegister {
 	HookRegister(char const* sym, void* hook, void** org) {
-		auto found = GetServerSymbol(sym);
-		if (found == nullptr) printf("FailedToHook: %p\n", sym);
-		if (HookFunction(found, org, hook)!= 0) printf("FailedToHook: %s\n", sym);
+		void* found = GetServerSymbol(sym);
+		if (found) {HookFunction(found, org, hook);return;}
+		printf("FailedToHook: %s\n", sym); exit(-1);
 	}
 };
-#define SYMHOOK(name,ret,sym,...)				\
+#define original(...) _original()(__VA_ARGS__)
+#define THook(name,ret,sym,...)				\
 struct name {									\
-	typedef ret(*func)(__VA_ARGS__);	\
-	static func& _original() {			\
-		static func storage = nullptr;			\
-		return storage;							\
-	}											\
-	template <typename... T>					\
-	static ret original(T&&... params) {		\
-		return _original()(std::forward<T>(params)...);\
-	}											\
+	typedef ret(*func)(__VA_ARGS__);			\
+	static func& _original() {static func storage = nullptr;return storage;}\
 	static ret _hook(__VA_ARGS__);				\
 };												\
 HookRegister name{sym,&name::_hook,(void**)&name::_original()};\

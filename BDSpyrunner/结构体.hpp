@@ -186,7 +186,7 @@ struct Actor {
 	BlockSource* getRegion() {
 		return f(BlockSource*, this + 3312);
 	}
-	// 获取生物类型
+	// 获取生物名称
 	string getTypeName() {
 		string tn;
 		SYMCALL<string&>("?getEntityName@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBVActor@@@Z",
@@ -199,10 +199,10 @@ struct Actor {
 			this);
 	}
 	// 获取查询用ID
-	VA* getUniqueID() {
-		return SYMCALL<VA*>("?getUniqueID@Actor@@QEBAAEBUActorUniqueID@@XZ", this);
+	VA getUniqueID() {
+		return SYMCALL<VA>("?getUniqueID@Actor@@QEBAAEBUActorUniqueID@@XZ", this);
 	}
-	// 获取实体名称
+	// 获取实体类型
 	string getEntityTypeName() {
 		string en_name;
 		SYMCALL<string&>("?EntityTypeToLocString@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@W4ActorType@@W4ActorTypeNamespaceRules@@@Z",
@@ -425,7 +425,7 @@ struct Scoreboard {
 	ScoreboardIdentityRef* getScoreboardIdentityRef(ScoreboardId* a2) {
 		return SYMCALL<ScoreboardIdentityRef*>("?getScoreboardIdentityRef@Scoreboard@@QEAAPEAVScoreboardIdentityRef@@AEBUScoreboardId@@@Z", this, a2);
 	}
-	//mode:{0:set,1:add,2:remove}
+	//更改玩家分数
 	int modifyPlayerScore(ScoreboardId* a3, Objective* a4, int count, char mode) {
 		bool a2 = true;
 		return SYMCALL<int>("?modifyPlayerScore@Scoreboard@@QEAAHAEA_NAEBUScoreboardId@@AEAVObjective@@HW4PlayerScoreSetFunction@@@Z",

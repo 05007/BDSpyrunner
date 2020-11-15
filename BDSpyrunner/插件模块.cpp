@@ -2,6 +2,7 @@
 #include "结构体.hpp"
 #include <thread>
 #include "Python/Python.h"
+#pragma warning(disable:4996)
 #pragma region 宏定义
 //调用所有函数
 #define CallAll(type,...)								\
@@ -262,13 +263,14 @@ static PyObject* api_getPlayerScore(PyObject* self, PyObject* args) {
 	}
 	return Py_BuildValue("i", 0);
 }
-static PyObject* api_setPlayerScore(PyObject* self, PyObject* args) {
+static PyObject* api_modifyPlayerScore(PyObject* self, PyObject* args) {
 	const char* uuid, * obj; int count; char mode;
 	if (PyArg_ParseTuple(args, "ssii", &uuid, &obj, &count, &mode)) {
 		Player* p = onlinePlayers[uuid];
 		if (PlayerCheck(p)) {
 			Objective* testobj = Score_Board->getObjective(obj);
 			if (testobj) {
+				//mode:{set,add,remove}
 				Score_Board->modifyPlayerScore((ScoreboardId*)Score_Board->getScoreboardId(p), testobj, count, mode);
 				return Py_True;
 			}
@@ -365,7 +367,7 @@ static PyMethodDef m[] = {
 	{"addLevel", api_addLevel, 1,0},
 	{"setNameTag", api_setNameTag, 1,0},
 	{"setCommandDescribe", api_setCommandDescribe, 1,0},
-	{"setPlayerScore", api_setPlayerScore, 1,0},
+	{"modifyPlayerScore", api_modifyPlayerScore, 1,0},
 	{"getPlayerScore", api_getPlayerScore, 1,0},
 	{"talkAs", api_talkAs, 1,0},
 	{"runcmdAs", api_runcmdAs, 1,0},
@@ -643,79 +645,55 @@ THook(玩家切换维度, bool, "?_playerChangeDimension@Level@@AEAA_NPEAVPlayer@@AEAV
 }
 THook(生物死亡, void, "?die@Mob@@UEAAXAEBVActorDamageSource@@@Z",
 	Mob* _this, VA dmsg) {
-	PyObject* args = PyDict_New();
 	char v72;
 	Actor* SrAct = SYMCALL<Actor*>("?fetchEntity@Level@@QEBAPEAVActor@@UActorUniqueID@@_N@Z",
 		f(VA, _this + 816), *(VA*)((*(VA(__fastcall**)(VA, char*))(*(VA*)dmsg + 64))(dmsg, &v72)), 0);
-	string sr_name = "";
-	string sr_type = "";
+	string srcname;
+	string srctype;
+	Vec3 srcp;
+	Vec3* mobp = _this->getPos();
 	if (SrAct) {
-		sr_name = SrAct->getNameTag();
-		int srtype = PlayerCheck(SrAct) ? 319 : SrAct->getEntityTypeId();
-		SYMCALL<string&>("?EntityTypeToLocString@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@W4ActorType@@W4ActorTypeNamespaceRules@@@Z",
-			&sr_type, srtype);
+		srcname = SrAct->getNameTag();
+		srctype = SrAct->getEntityTypeName();
+		srcp = *SrAct->getPos();
 	}
-	if (PlayerCheck(_this)) {
-		getPlayerInfo(((Player*)_this));
-		string pt;
-		SYMCALL<string&>("?EntityTypeToLocString@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@W4ActorType@@W4ActorTypeNamespaceRules@@@Z",
-			&pt, 319);
-		PyDict_SetItemString(args, "playername", Py_BuildValue("s", pn));
-		PyDict_SetItemString(args, "isstand", Py_BuildValue("i", st));
-		PyDict_SetItemString(args, "mobname", Py_BuildValue("s", pn.c_str()));
-		PyDict_SetItemString(args, "mobtype", Py_BuildValue("s", pt.c_str()));
-		PyDict_SetItemString(args, "XYZ", Py_BuildValue("[f,f,f]", pp->x, pp->y, pp->z));
-	}
-	else {
-		Vec3* pp = _this->getPos();
-		PyDict_SetItemString(args, "mobname", Py_BuildValue("s", _this->getNameTag().c_str()));
-		PyDict_SetItemString(args, "mobtype", Py_BuildValue("s", _this->getEntityTypeName().c_str()));
-		PyDict_SetItemString(args, "XYZ", Py_BuildValue("[f,f,f]", pp->x, pp->y, pp->z));
-	}
-	PyDict_SetItemString(args, "srcname", Py_BuildValue("s", sr_name.c_str()));
-	PyDict_SetItemString(args, "srctype", Py_BuildValue("s", sr_type.c_str()));
-	PyDict_SetItemString(args, "dmcase", Py_BuildValue("i", *((unsigned*)dmsg + 2)));
-	CallAll(u8"生物死亡", "O", args);
-	Py_DECREF(args);
+	CallAll(u8"生物死亡", "{s:s,s:s,s:[f,f,f],s:i,s:s,s:s,s:[f,f,f]}",
+		"srcname", srcname.c_str(),
+		"srctype", srctype.c_str(),
+		"srcpos", srcp.x, srcp.y, srcp.z,
+		"dmcase", f(unsigned, dmsg + 8),
+		"mobname", _this->getNameTag().c_str(),
+		"mobtype", _this->getEntityTypeName().c_str(),
+		"mobpos", mobp->x, mobp->y, mobp->z
+	);
 	if (res) original(_this, dmsg);
 }
 THook(生物受伤, bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
-	Mob* _this, VA dmsg, int a3, int a4, bool a5) {
-	PyObject* args = PyDict_New();
+	Mob* _this, VA dmsg, int a3, bool a4, bool a5) {
 	char v72;
 	Actor* SrAct = SYMCALL<Actor*>("?fetchEntity@Level@@QEBAPEAVActor@@UActorUniqueID@@_N@Z",
-		f(VA, _this + 816), *(VA*)(*(VA(__fastcall**)(VA, char*))(*(VA*)dmsg + 64))(dmsg, &v72), 0);
-	string sr_name = "";
-	string sr_type = "";
+		f(VA, _this + 816), *(VA*)((*(VA(__fastcall**)(VA, char*))(*(VA*)dmsg + 64))(dmsg, &v72)), 0);
+	string srcname;
+	string srctype;
+	Vec3 srcp;
+	Vec3* mobp = _this->getPos();
 	if (SrAct) {
-		sr_name = SrAct->getNameTag();
-		int srtype = PlayerCheck(SrAct) ? 319 : SrAct->getEntityTypeId();
-		SYMCALL<string&>("?EntityTypeToLocString@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@W4ActorType@@W4ActorTypeNamespaceRules@@@Z",
-			&sr_type, srtype);
+		srcname = SrAct->getNameTag();
+		srctype = SrAct->getEntityTypeName();
+		srcp = *SrAct->getPos();
 	}
-	if (PlayerCheck(_this)) {
-		getPlayerInfo(((Player*)_this));
-		string pt;
-		SYMCALL<string&>("?EntityTypeToLocString@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@W4ActorType@@W4ActorTypeNamespaceRules@@@Z",
-			&pt, 319);
-		PyDict_SetItemString(args, "playername", Py_BuildValue("s", pn));
-		PyDict_SetItemString(args, "isstand", Py_BuildValue("i", st));
-		PyDict_SetItemString(args, "mobname", Py_BuildValue("s", pn.c_str()));
-		PyDict_SetItemString(args, "mobtype", Py_BuildValue("s", pt.c_str()));
-		PyDict_SetItemString(args, "XYZ", Py_BuildValue("[f,f,f]", pp->x, pp->y, pp->z));
-	}
-	else {
-		Vec3* pp = _this->getPos();
-		PyDict_SetItemString(args, "mobname", Py_BuildValue("s", _this->getNameTag().c_str()));
-		PyDict_SetItemString(args, "mobtype", Py_BuildValue("s", _this->getEntityTypeName().c_str()));
-		PyDict_SetItemString(args, "XYZ", Py_BuildValue("[f,f,f]", pp->x, pp->y, pp->z));
-	}
-	PyDict_SetItemString(args, "srcname", Py_BuildValue("s", sr_name.c_str()));
-	PyDict_SetItemString(args, "srctype", Py_BuildValue("s", sr_type.c_str()));
-	PyDict_SetItemString(args, "dmcase", Py_BuildValue("i", *((unsigned*)dmsg + 2)));
-	CallAll(u8"生物受伤", "O", args);
-	Py_DECREF(args);
-	RET(_this, dmsg, a3, a4, a5);
+	CallAll(u8"生物受伤", "{s:s,s:s,s:[f,f,f],s:i,s:s,s:s,s:[f,f,f],s:i}",
+		"srcname", srcname.c_str(),
+		"srctype", srctype.c_str(),
+		"srcpos", srcp.x, srcp.y, srcp.z,
+		"dmcase", f(unsigned, dmsg + 8),
+		"mobname", _this->getNameTag().c_str(),
+		"mobtype", _this->getEntityTypeName().c_str(),
+		"mobpos", mobp->x, mobp->y, mobp->z,
+		"damage", a3
+	);
+	if (res) original(_this, dmsg, a3, a4, a5);
+	return 0;
 }
 THook(玩家重生, void, "?respawn@Player@@UEAAXXZ",
 	Player* p) {
@@ -799,11 +777,23 @@ THook(更新命令方块, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentif
 	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
 		_this, id, *((char*)cbp + 16));
 	if (PlayerCheck(p)) {
-		BlockPos bp = f(BlockPos, cbp + 40);
-		string cmd = f(string, cbp + 64);
+		auto bp = f(BlockPos, cbp + 40);
+		auto mode = f(unsigned short, cbp + 52);
+		auto condition = f(bool, cbp + 54);
+		auto redstone = f(bool, cbp + 55);
+		auto cmd = f(string, cbp + 64);
+		auto output = f(string, cbp + 96);
+		auto rawname = f(string, cbp + 128);
+		auto delay = f(int, cbp + 160);
 		getPlayerInfo(p);
-		CallAll(u8"命令方块", "{s:s,s:s,s:[f,f,f],s:i,s:i,s:[i,i,i]}",
-			"cmd", cmd.c_str(),
+		CallAll(u8"命令方块", "{s:i,s:i,s:i,s:s,s:s,s:s,s:i,s:s,s:[f,f,f],s:i,s:i,s:[i,i,i]}",
+			"mode", mode,
+			"condition", condition,
+			"redstone", redstone,
+			"cmd",cmd.c_str(),
+			"output",output.c_str(),
+			"rawname",rawname.c_str(),
+			"delay",delay,
 			"playername", pn,
 			"XYZ", pp->x, pp->y, pp->z,
 			"dimensionid", did,
@@ -832,25 +822,41 @@ THook(爆炸, bool, "?explode@Level@@QEAAXAEAVBlockSource@@PEAVActor@@AEBVVec3@@M_
 	);
 	RET(_this, bs, a3, pos, a5, a6, a7, a8, a9);
 }
+THook(命令方块执行, bool, "?performCommand@CommandBlockActor@@QEAA_NAEAVBlockSource@@@Z",
+	VA _this, BlockSource* a2) {
+	//脉冲:0,重复:1,链:2
+	int mode = SYMCALL<int>("?getMode@CommandBlockActor@@QEBA?AW4CommandBlockMode@@AEAVBlockSource@@@Z",
+		_this, a2);
+	//无条件:0,有条件:1
+	bool condition = SYMCALL<bool>("?getConditionalMode@CommandBlockActor@@QEBA_NAEAVBlockSource@@@Z",
+		_this, a2);
+	string cmd = f(string, _this + 264);
+	string rawname = f(string, _this + 296);
+	BlockPos bp = f(BlockPos, _this + 44);
+	CallAll(u8"命令方块执行", "{s:s,s:s,s:[i,i,i],s:i,s:i}",
+		"cmd", cmd.c_str(),
+		"name", rawname.c_str(),
+		"XYZ", bp.x, bp.y, bp.z,
+		"mode", mode,
+		"condition", condition
+	);
+	RET(_this, a2);
+}
 #pragma endregion
-// 插件载入
 void init() {
-	out("BDSPyrunner v0.0.3 Loading");
-	out(Py_GetVersion());
+	out("BDSPyrunner v0.0.4 Loading..." << Py_GetVersion());
 	PyPreConfig cfg;
 	PyPreConfig_InitIsolatedConfig(&cfg);
 	Py_PreInitialize(&cfg);
 	PyImport_AppendInittab("mc", [] {return PyModule_Create(&mc); }); //增加一个模块
 	Py_Initialize();
-	FILE* f;
 	_finddata64i32_t fileinfo;//用于查找的句柄
 	long long handle = _findfirst64i32("./py/*.py", &fileinfo);
 	if (handle != -1) {
 		do {
 			Py_NewInterpreter();
-			out(u8"读取Py文件:" << fileinfo.name);
-			fopen_s(&f, ("./py/" + (string)fileinfo.name).c_str(), "rb");
-			PyRun_SimpleFileExFlags(f, fileinfo.name, 1, 0);
+			out(u8"读取Py文件:" << fileinfo.name);;
+			PyRun_SimpleFileExFlags(fopen(("./py/" + (string)fileinfo.name).c_str(), "rb"), fileinfo.name, 1, 0);
 		} while (!_findnext64i32(handle, &fileinfo));
 		_findclose(handle);
 	}

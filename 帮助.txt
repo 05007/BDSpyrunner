@@ -261,9 +261,9 @@
 参数详解：uuid - 在线玩家uuid字符串
 [例] getPlayerScore(UUID('twoone3'))
 
-函数名：setPlayerScore
-功能：设置计分板分数
+函数名：modifyPlayerScore
+功能：修改计分板分数
 参数类型：字符串
 参数详解：uuid - 在线玩家uuid字符串,objname - 计分板对象,count - 操作数量,mode - 操作模式(0:set,1:add,2:remove)
-[例] setPlayerScore(UUID('twoone3'),'test',1,0)
+[例] modifyPlayerScore(UUID('twoone3'),'test',1,0)
 

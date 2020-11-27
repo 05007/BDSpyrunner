@@ -30,10 +30,10 @@
 
 函数名：UUID
 功能：获取uuid
-参数类型：字符串
-参数详解：nane - 玩家名字
+参数类型：整数
+参数详解：player - 玩家指针
 返回值：玩家的uuid
-[例] UUID('twoone3')
+[例] UUID(player)
 
 函数名：getStructure***
 功能：获取一个结构
@@ -53,201 +53,201 @@
 函数名：setName
 功能：重命名一个指定的玩家名
 参数类型：字符串，字符串
-参数详解：uuid - 在线玩家的uuid字符串，newName - 新的名称
+参数详解：player - 在线玩家指针，newName - 新的名称
 返回值：是否命名成功
 （备注：该函数可能不会变更客户端实际显示名）
-[例] setName(UUID('twoone3'), '名字')
+[例] setName(player, '名字')
 
 函数名：getPlayerAbilities***
 功能：获取玩家能力表
 参数类型：字符串
-参数详解：uuid - 在线玩家的uuid字符串
+参数详解：player - 在线玩家指针
 返回值：能力json字符串
-[例] let a = getPlayerAbilities(UUID('twoone3'))
+[例] let a = getPlayerAbilities(player)
 
 函数名：setPlayerAbilities***
 功能：设置玩家能力表
 参数类型：字符串，字符串
-参数详解：uuid - 在线玩家的uuid字符串，newAbilities - 新能力json数据字符串
+参数详解：player - 在线玩家指针，newAbilities - 新能力json数据字符串
 返回值：是否设置成功
 （备注：该函数可能不会变更客户端实际显示能力）
-[例] setPlayerAbilities(UUID('twoone3'), '{"opencontainers": false}')
+[例] setPlayerAbilities(player, '{"opencontainers": false}')
 
 函数名：getPlayerAttributes***
 功能：获取玩家属性表
 参数类型：字符串
-参数详解：uuid - 在线玩家的uuid字符串
+参数详解：player - 在线玩家指针
 返回值：属性json字符串
-[例] getPlayerAttributes(UUID('twoone3'))
+[例] getPlayerAttributes(player)
 
 函数名：setPlayerAttributes***
 功能：设置玩家属性默认值表
 参数类型：字符串，字符串
-参数详解：uuid - 在线玩家的uuid字符串，newAttributes - 新属性默认值json数据字符串
+参数详解：player - 在线玩家指针，newAttributes - 新属性默认值json数据字符串
 返回值：是否设置成功
 （备注：该函数可能不会变更客户端实际显示值；该函数可能导致玩家死后重生不会恢复初始属性）
-[例] setPlayerAttributes(UUID('twoone3'), '{"attack_damage": 9999}')
+[例] setPlayerAttributes(player, '{"attack_damage": 9999}')
 
 函数名：setPlayerTempAttributes***
 功能：设置玩家属性临时值表
 参数类型：字符串，字符串
-参数详解：uuid - 在线玩家的uuid字符串，newTempAttributes - 新属性临时值json数据字符串
+参数详解：player - 在线玩家指针，newTempAttributes - 新属性临时值json数据字符串
 返回值：是否设置成功
 （备注：该函数可能不会变更客户端实际显示值）
-[例] setPlayerTempAttributes(UUID('twoone3'), '{"hunger": 10}')
+[例] setPlayerTempAttributes(player, '{"hunger": 10}')
 
 函数名：getPlayerMaxAttributes***
 功能：获取玩家属性上限值表
 参数类型：字符串
-参数详解：uuid - 在线玩家的uuid字符串
+参数详解：player - 在线玩家指针
 返回值：属性上限值json字符串
-[例] let m = getPlayerMaxAttributes(UUID('twoone3'))
+[例] let m = getPlayerMaxAttributes(player)
 
 函数名：setPlayerMaxAttributes***
 功能：设置玩家属性上限值表
 参数类型：字符串，字符串
-参数详解：uuid - 在线玩家的uuid字符串，newMaxAttributes - 新属性上限值json数据字符串
+参数详解：player - 在线玩家指针，newMaxAttributes - 新属性上限值json数据字符串
 返回值：是否设置成功
 （备注：该函数可能不会变更客户端实际显示值）
-[例] setPlayerMaxAttributes(UUID('twoone3'), '{"maxhealth": 200}')
+[例] setPlayerMaxAttributes(player, '{"maxhealth": 200}')
 
 函数名：getPlayerItems***
 功能：获取玩家所有物品列表
 参数类型：字符串
-参数详解：uuid - 在线玩家的uuid字符串
+参数详解：player - 在线玩家指针
 返回值：物品列表json字符串
-[例] getPlayerItems(UUID('twoone3'))
+[例] getPlayerItems(player)
 
 函数名：getPlayerSelectedItem
 功能：获取玩家当前选中项信息
 参数类型：字符串
-参数详解：uuid - 在线玩家的uuid字符串
+参数详解：player - 在线玩家指针
 返回值：当前选中项信息json字符串
-[例] getPlayerSelectedItem(UUID('twoone3'))
+[例] getPlayerSelectedItem(player)
 
 函数名：setPlayerItems***
 功能：设置玩家所有物品列表
 参数类型：字符串，字符串
-参数详解：uuid - 在线玩家的uuid字符串，newItems - 新物品列表json数据字符串
+参数详解：player - 在线玩家指针，newItems - 新物品列表json数据字符串
 返回值：是否设置成功
 （备注：特定条件下可能不会变更游戏内实际物品）
-[例] setPlayerItems(UUID('twoone3'),'{"Offhand":{"tt":9,"tv":[{"tt":10,"tv":[{"ck":"Count","cv":{"tt":1,"tv":1}},{"ck":"Damage","cv":{"tt":2,"tv":0}},{"ck":"Name","cv":{"tt":8,"tv":"minecraft:trident"}},{"ck":"tag","cv":{"tt":10,"tv":[{"ck":"ench","cv":{"tt":9,"tv":[{"tt":10,"tv":[{"ck":"id","cv":{"tt":2,"tv":7}},{"ck":"lvl","cv":{"tt":2,"tv":8888}}]}]}}]}}]}]}}')
+[例] setPlayerItems(player,'{"Offhand":{"tt":9,"tv":[{"tt":10,"tv":[{"ck":"Count","cv":{"tt":1,"tv":1}},{"ck":"Damage","cv":{"tt":2,"tv":0}},{"ck":"Name","cv":{"tt":8,"tv":"minecraft:trident"}},{"ck":"tag","cv":{"tt":10,"tv":[{"ck":"ench","cv":{"tt":9,"tv":[{"tt":10,"tv":[{"ck":"id","cv":{"tt":2,"tv":7}},{"ck":"lvl","cv":{"tt":2,"tv":8888}}]}]}}]}}]}]}}')
 
 函数名：addPlayerItemEx***
 功能：增加玩家一个物品
 参数类型：字符串，字符串
-参数详解：uuid - 在线玩家的uuid字符串，item - 物品json数据字符串
+参数详解：player - 在线玩家指针，item - 物品json数据字符串
 返回值：是否添加成功
 （备注：特定条件下可能不会变更游戏内实际物品）
-[例] setPlayerItems(UUID('twoone3'), '{"tt":10,"tv":[{"ck":"Count","cv":{"tt":1,"tv":1}},{"ck":"Damage","cv":{"tt":2,"tv":0}},{"ck":"Name","cv":{"tt":8,"tv":"minecraft:trident"}},{"ck":"tag","cv":{"tt":10,"tv":[{"ck":"ench","cv":{"tt":9,"tv":[{"tt":10,"tv":[{"ck":"id","cv":{"tt":2,"tv":10}},{"ck":"lvl","cv":{"tt":2,"tv":9999}}]}]}}]}}]}')
+[例] setPlayerItems(player, '{"tt":10,"tv":[{"ck":"Count","cv":{"tt":1,"tv":1}},{"ck":"Damage","cv":{"tt":2,"tv":0}},{"ck":"Name","cv":{"tt":8,"tv":"minecraft:trident"}},{"ck":"tag","cv":{"tt":10,"tv":[{"ck":"ench","cv":{"tt":9,"tv":[{"tt":10,"tv":[{"ck":"id","cv":{"tt":2,"tv":10}},{"ck":"lvl","cv":{"tt":2,"tv":9999}}]}]}}]}}]}')
 
 函数名：addItem
 功能：增加玩家一个物品
 参数类型：字符串
-参数详解：uuid - 在线玩家的uuid字符串，id - 物品id值，aux - 物品特殊值，count - 数量
+参数详解：player - 在线玩家指针，id - 物品id值，aux - 物品特殊值，count - 数量
 返回值：是否增加成功
 （备注：特定条件下可能不会变更游戏内实际物品）
-[例] addItem(UUID('twoone3'), 9, 0, 32)
+[例] addItem(player, 9, 0, 32)
 
 函数名：getPlayerEffects***
 功能：获取玩家所有效果列表
 参数类型：字符串
-参数详解：uuid - 在线玩家的uuid字符串
+参数详解：player - 在线玩家指针
 返回值：效果列表json字符串
-[例] let e = getPlayerEffects(UUID('twoone3'))
+[例] let e = getPlayerEffects(player)
 
 函数名：setPlayerEffects***
 功能：设置玩家所有效果列表
 参数类型：字符串，字符串
-参数详解：uuid - 在线玩家的uuid字符串，newEffects - 新效果列表json数据字符串
+参数详解：player - 在线玩家指针，newEffects - 新效果列表json数据字符串
 返回值：是否设置成功
-[例] setPlayerEffects(UUID('twoone3'), '{"tt":9,"tv":[{"tt":10,"tv":[{"ck":"Ambient","cv":{"tt":1,"tv":0}},{"ck":"Amplifier","cv":{"tt":1,"tv":0}},{"ck":"DisplayOnScreenTextureAnimation","cv":{"tt":1,"tv":0}},{"ck":"Duration","cv":{"tt":3,"tv":3461}},{"ck":"DurationEasy","cv":{"tt":3,"tv":3461}},{"ck":"DurationHard","cv":{"tt":3,"tv":3461}},{"ck":"DurationNormal","cv":{"tt":3,"tv":3461}},{"ck":"Id","cv":{"tt":1,"tv":16}},{"ck":"ShowParticles","cv":{"tt":1,"tv":1}}]}]}')
+[例] setPlayerEffects(player, '{"tt":9,"tv":[{"tt":10,"tv":[{"ck":"Ambient","cv":{"tt":1,"tv":0}},{"ck":"Amplifier","cv":{"tt":1,"tv":0}},{"ck":"DisplayOnScreenTextureAnimation","cv":{"tt":1,"tv":0}},{"ck":"Duration","cv":{"tt":3,"tv":3461}},{"ck":"DurationEasy","cv":{"tt":3,"tv":3461}},{"ck":"DurationHard","cv":{"tt":3,"tv":3461}},{"ck":"DurationNormal","cv":{"tt":3,"tv":3461}},{"ck":"Id","cv":{"tt":1,"tv":16}},{"ck":"ShowParticles","cv":{"tt":1,"tv":1}}]}]}')
 
 函数名：setPlayerBossBar***
 功能：设置玩家自定义血条
 参数类型：字符串，字符串，浮点型
-参数详解：uuid - 在线玩家的uuid字符串，title - 血条标题，percent - 血条百分比
+参数详解：player - 在线玩家指针，title - 血条标题，percent - 血条百分比
 返回值：是否设置成功
-[例] setPlayerBossBar(UUID('twoone3'), '欢迎来到梦之故里', 1.00)
+[例] setPlayerBossBar(player, '欢迎来到梦之故里', 1.00)
 
 函数名：removePlayerBossBar***
 功能：清除玩家自定义血条
 参数类型：字符串
-参数详解：uuid - 在线玩家的uuid字符串
+参数详解：player - 在线玩家指针
 返回值：是否清除成功
-[例] removePlayerBossBar(UUID('twoone3'))
+[例] removePlayerBossBar(player)
 
 函数名：setPlayerSidebar***
 功能：设置玩家自定义侧边栏临时计分板
 参数类型：字符串，字符串，字符串
-参数详解：uuid - 在线玩家的uuid字符串，title - 侧边栏标题，list - 列表字符串数组
+参数详解：player - 在线玩家指针，title - 侧边栏标题，list - 列表字符串数组
 返回值：是否设置成功
 （注：列表总是从第1行开始，总计不超过15行）
-[例] setPlayerSidebar(UUID('twoone3'), '自定义侧边栏', '["第一行", "第二行", "我在哪行?    "]')
+[例] setPlayerSidebar(player, '自定义侧边栏', '["第一行", "第二行", "我在哪行?    "]')
 
 函数名：removePlayerSidebar***
 功能：清除玩家自定义侧边栏
 参数类型：字符串
-参数详解：uuid - 在线玩家的uuid字符串
+参数详解：player - 在线玩家指针
 返回值：是否清除成功
-[例] removePlayerSidebar(UUID('twoone3'))
+[例] removePlayerSidebar(player)
 
 函数名：getPlayerPermissionAndGametype***
 功能：获取玩家权限与游戏模式
 参数类型：字符串
-参数详解：uuid - 在线玩家的uuid字符串
+参数详解：player - 在线玩家指针
 返回值：权限与模式的json字符串
-[例] getPlayerPermissionAndGametype(UUID('twoone3'))
+[例] getPlayerPermissionAndGametype(player)
 
 函数名：setPlayerPermissionAndGametype***
 功能：设置玩家权限与游戏模式
 参数类型：字符串，字符串
-参数详解：uuid - 在线玩家的uuid字符串，newModes - 新权限或模式json数据字符串
+参数详解：player - 在线玩家指针，newModes - 新权限或模式json数据字符串
 返回值：是否设置成功
 （备注：特定条件下可能不会变更游戏内实际能力）
-[例] setPlayerPermissionAndGametype(UUID('twoone3'), '{"gametype" : 3}')
+[例] setPlayerPermissionAndGametype(player, '{"gametype" : 3}')
 
 函数名：getPlayerInfo
 功能：查询在线玩家基本信息
 参数类型：字符串
-参数详解：uuid - 在线玩家的uuid字符串
+参数详解：player - 在线玩家指针
 返回值：玩家基本信息字典
-[例] getPlayerInfo(UUID('twoone3'))
+[例] getPlayerInfo(player)
 
 函数名：transferServer
 功能：传送玩家至指定服务器
 参数类型：字符串，字符串，整型
-参数详解：uuid - 在线玩家的uuid字符串，addr - 待传服务器，port - 端口
+参数详解：player - 在线玩家指针，addr - 待传服务器，port - 端口
 返回值：是否传送成功
-[例] transferServer(UUID('twoone3'), 'www.xiafox.com', 19132)
+[例] transferServer(player, 'www.xiafox.com', 19132)
 
 函数名：teleport
 功能：传送玩家至指定坐标和维度
 参数类型：字符串，浮点型，浮点型，浮点型，整型
 参数详解：uuid - 在线玩家的uu*d字符串，X - x，Y - y，Z - z，dimensionid - 维度ID
 返回值：是否传送成功
-[例] teleport(UUID('twoone3'), 10, 99, 10, 2)
+[例] teleport(player, 10, 99, 10, 2)
 
 函数名：talkAs
 功能：模拟玩家发送一个文本
 参数类型：字符串，字符串
-参数详解：uuid - 在线玩家的uuid字符串，msg - 待模拟发送的文本
+参数详解：player - 在线玩家指针，msg - 待模拟发送的文本
 返回值：是否发送成功
-[例] talkAs(UUID('twoone3'), '针不戳')
+[例] talkAs(player, '针不戳')
 
 函数名：runcmdAs
 功能：模拟玩家执行一个指令
 参数类型：字符串，字符串
-参数详解：uuid - 在线玩家的uuid字符串，cmd - 待模拟执行的指令
+参数详解：player - 在线玩家指针，cmd - 待模拟执行的指令
 返回值：是否发送成功
-[例] runcmdAs(UUID('twoone3'), '/me 针不戳')
+[例] runcmdAs(player, '/me 针不戳')
 
 函数名：sendForm
 功能：向指定的玩家发送一个自定义表单
 参数类型：字符串，字符串
-参数详解：uuid - 在线玩家的uuid字符串，json - 自定义表单的json字符串（要使用自定义表单类型，参考nk、pm格式或minebbs专栏）
+参数详解：player - 在线玩家指针，json - 自定义表单的json字符串（要使用自定义表单类型，参考nk、pm格式或minebbs专栏）
 返回值：创建的表单id，为 0 表示发送失败
-[例] sendForm(UUID('twoone3'), '{"content":[{"type":"label","text":"这是一个文本标签"},{"placeholder":"水印文本","default":"","type":"input","text":""},{"default":true,"type":"toggle","text":"开关~或许是吧"},{"min":0.0,"max":10.0,"step":2.0,"default":3.0,"type":"slider","text":"游标滑块！？"},{"default":1,"steps":["Step 1","Step 2","Step 3"],"type":"step_slider","text":"矩阵滑块？!"},{"default":1,"options":["Option 1","Option 2","Option 3"],"type":"dropdown","text":"如你所见，下拉框"}], "type":"custom_form","title":"这是一个自定义窗体"}')
+[例] sendForm(player, '{"content":[{"type":"label","text":"这是一个文本标签"},{"placeholder":"水印文本","default":"","type":"input","text":""},{"default":true,"type":"toggle","text":"开关~或许是吧"},{"min":0.0,"max":10.0,"step":2.0,"default":3.0,"type":"slider","text":"游标滑块！？"},{"default":1,"steps":["Step 1","Step 2","Step 3"],"type":"step_slider","text":"矩阵滑块？!"},{"default":1,"options":["Option 1","Option 2","Option 3"],"type":"dropdown","text":"如你所见，下拉框"}], "type":"custom_form","title":"这是一个自定义窗体"}')
 
 函数名：setTimeout
 功能：延时执行一条指令
@@ -258,12 +258,12 @@
 函数名：getPlayerScore
 功能：获取计分板分数
 参数类型：字符串
-参数详解：uuid - 在线玩家uuid字符串
-[例] getPlayerScore(UUID('twoone3'))
+参数详解：player - 在线玩家指针
+[例] getPlayerScore(player)
 
 函数名：modifyPlayerScore
 功能：修改计分板分数
 参数类型：字符串
-参数详解：uuid - 在线玩家uuid字符串,objname - 计分板对象,count - 操作数量,mode - 操作模式(0:set,1:add,2:remove)
-[例] modifyPlayerScore(UUID('twoone3'),'test',1,0)
+参数详解：player - 在线玩家指针,objname - 计分板对象,count - 操作数量,mode - 操作模式(0:set,1:add,2:remove)
+[例] modifyPlayerScore(player,'test',1,0)
 

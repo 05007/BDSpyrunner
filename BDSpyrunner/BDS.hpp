@@ -1,17 +1,16 @@
 #pragma once
-#include "预编译头.h"
+#include "pch.h"
 #include <vector>
 #include <unordered_map>
-#include "head/ArduinoJson.h"
-#define f(type,ptr) (*reinterpret_cast<type*>(ptr))
+#define f(type,ptr) (*(type*)(ptr))
 using namespace std;
 #pragma region 方块
 struct BlockLegacy {
 	string getBlockName() {
-		return f(string, this + 112);
+		return f(string, this + 120);
 	}
-	short getBlockItemID() {	// IDA VanillaItems::initCreativeItemsCallback Item::beginCreativeGroup "itemGroup.name.planks"
-		short v3 = f(short, this + 268);
+	short getBlockItemID() {	// IDA VanillaItems::initCreativeItemsCallback Item::beginCreativeGroup "itemGroup.name.planks"2533 line
+		short v3 = f(short, this + 312);
 		if (v3 < 0x100) {
 			return v3;
 		}
@@ -186,17 +185,9 @@ struct Actor {
 	BlockSource* getRegion() {
 		return f(BlockSource*, this + 3312);
 	}
-	// 获取生物名称
-	string getTypeName() {
-		string tn;
-		SYMCALL<string&>("?getEntityName@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBVActor@@@Z",
-			&tn, this);
-		return tn;
-	}
 	// 获取实体类型
-	int getEntityTypeId() {
-		return SYMCALL<int>("?getEntityTypeId@Actor@@UEBA?AW4ActorType@@XZ",
-			this);
+	unsigned getEntityTypeId() {
+		return f(unsigned, this + 948);
 	}
 	// 获取查询用ID
 	VA getUniqueID() {
@@ -218,16 +209,16 @@ struct Actor {
 		return SYMCALL<VA>("?addEffect@Actor@@QEAAXAEBVMobEffectInstance@@@Z", this, ef);
 	}
 	// 获取生命值
-	float getHealth() {
+	pair<float, float> getHealth() {
 		VA bpattrmap = f(VA, this + 135);// IDA ScriptHealthComponent::retrieveComponentFrom
 		if (bpattrmap) {
 			VA hattr = SYMCALL<VA>("?getMutableInstance@BaseAttributeMap@@QEAAPEAVAttributeInstance@@I@Z",
 				bpattrmap, 7);//SYM_OBJECT(UINT32, 0x019700B8 + 4));// SharedAttributes::HEALTH
 			if (hattr) {
-				return f(float, hattr + 33);
+				return { f(float, hattr + 33), f(float, hattr + 32) };
 			}
 		}
-		return 0;
+		return { 0.0f,0.0f };
 	}
 	bool setHealth(float& value, float& max) {
 		VA bpattrmap = ((VA*)this)[135];
@@ -339,12 +330,12 @@ struct Player : Mob {
 	}
 	// 获取游戏时游玩权限
 	char getPermissionLevel() {		// IDA Abilities::setPlayerPermissions
-		return f(char, f(char*, this + 2112) + 1);
+		return f(char, f(char*, this + 2192) + 1);
 	}
 	// 设置游戏时游玩权限
 	void setPermissionLevel(char m) {
 		SYMCALL<void>("?setPlayerPermissions@Abilities@@QEAAXW4PlayerPermissionLevel@@@Z",
-			this + 2112, m);
+			this + 2192, m);
 	}
 	// 更新所有物品列表
 	void updateInventory() {
@@ -360,7 +351,6 @@ struct Player : Mob {
 #pragma endregion
 #pragma region 计分板
 struct ScoreboardId {};
-struct PlayerScoreboardId :ScoreboardId {};
 struct PlayerScore {
 	VA getscore() {
 		return f(VA, this + 4);
@@ -376,19 +366,10 @@ struct ScoreInfo {
 	}
 };
 struct Objective {
-	ScoreInfo* getPlayerScore(ScoreInfo* a1, ScoreboardId* a2) {
+	ScoreInfo* getPlayerScore(ScoreboardId* a2) {
+		char a1[12];
 		return SYMCALL<ScoreInfo*>("?getPlayerScore@Objective@@QEBA?AUScoreInfo@@AEBUScoreboardId@@@Z",
 			this, a1, a2);
-	}
-	ScoreInfo* getPlayerScore(ScoreInfo* a1, PlayerScoreboardId* a2) {
-		return SYMCALL<ScoreInfo*>("?getPlayerScore@Objective@@QEBA?AUScoreInfo@@AEBUScoreboardId@@@Z",
-			this, a1, a2);
-	}
-};
-struct IdentityDictionary {
-	//4个unmap
-	ScoreboardId* getScoreboardID(PlayerScoreboardId* a2) {
-		return SYMCALL<ScoreboardId*>("??$_getScoreboardId@UPlayerScoreboardId@@@IdentityDictionary@@AEBAAEBUScoreboardId@@AEBUPlayerScoreboardId@@AEBV?$unordered_map@UPlayerScoreboardId@@UScoreboardId@@U?$hash@UPlayerScoreboardId@@@std@@U?$equal_to@UPlayerScoreboardId@@@4@V?$allocator@U?$pair@$$CBUPlayerScoreboardId@@UScoreboardId@@@std@@@4@@std@@@Z", this, a2, this);
 	}
 };
 struct ScoreboardIdentityRef {
@@ -416,13 +397,10 @@ struct Scoreboard {
 	auto getTrackedIds() {
 		return SYMCALL<vector<ScoreboardId>*>("?getTrackedIds@Scoreboard@@QEBA?AV?$vector@UScoreboardId@@V?$allocator@UScoreboardId@@@std@@@std@@XZ", this);
 	}
-	auto getIdentityDictionary() {
-		return (IdentityDictionary*)((char*)this + 80);//gouzaohanshu
-	}
 	auto getScoreboardId(Player* a2) {
-		return SYMCALL<PlayerScoreboardId*>("?getScoreboardId@Scoreboard@@QEBAAEBUScoreboardId@@AEBVActor@@@Z", this, a2);
+		return SYMCALL<ScoreboardId*>("?getScoreboardId@Scoreboard@@QEBAAEBUScoreboardId@@AEBVActor@@@Z", this, a2);
 	}
-	ScoreboardIdentityRef* getScoreboardIdentityRef(ScoreboardId* a2) {
+	auto getScoreboardIdentityRef(ScoreboardId* a2) {
 		return SYMCALL<ScoreboardIdentityRef*>("?getScoreboardIdentityRef@Scoreboard@@QEAAPEAVScoreboardIdentityRef@@AEBUScoreboardId@@@Z", this, a2);
 	}
 	//更改玩家分数

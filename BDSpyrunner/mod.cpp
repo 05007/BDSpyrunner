@@ -133,13 +133,6 @@ static PyObject* api_setTimeout(PyObject* self, PyObject* args) {
 	}
 	return Py_None;
 }
-// 获取uuid
-static PyObject* api_UUID(PyObject* self, PyObject* args) {
-	if (PyArg_ParseTuple(args, "K:UUID", &_p))
-		if (PlayerCheck(_p))
-			return PyUnicode_FromString(_p->getUuid().c_str());
-	return PyUnicode_FromString("");
-}
 // 设置监听
 static PyObject* api_setListener(PyObject* self, PyObject* args) {
 	const char* m;
@@ -159,7 +152,7 @@ static PyObject* api_sendCustomForm(PyObject* self, PyObject* args) {
 	return PyLong_FromLong(0);
 }
 static PyObject* api_sendSimpleForm(PyObject* self, PyObject* args) {
-	const char* title, * content,* buttons;
+	const char* title, * content, * buttons;
 	if (PyArg_ParseTuple(args, "Ksss:sendSimpleForm", &_p, &title, &content, &buttons)) {
 		char str[512];
 		sprintf(str, R"({"title":"%s","content":"%s","buttons":%s,"type":"form"})", title, content, buttons);
@@ -207,14 +200,31 @@ static PyObject* api_getPlayerInfo(PyObject* self, PyObject* args) {
 	if (PyArg_ParseTuple(args, "K:getPlayerInfo", &_p)) {
 		if (PlayerCheck(_p)) {
 			Vec3* pp = _p->getPos();
-			return Py_BuildValue("{s:s,s:[f,f,f],s:i,s:i,s:f}",
+			return Py_BuildValue("{s:s,s:[f,f,f],s:i,s:i,s:f,s:f,s:s}",
 				"playername", _p->getNameTag().c_str(),
 				"XYZ", pp->x, pp->y, pp->z,
 				"dimensionid", _p->getDimensionId(),
 				"isstand", _p->isStand(),
-				"health", _p->getHealth().first
+				"health", _p->getHealth().first,
+				"maxhealth", _p->getHealth().second,
+				"uuid", _p->getUuid().c_str()
 			);
 		}
+	}
+	return PyDict_New();
+}
+static PyObject* api_getActorInfo(PyObject* self, PyObject* args) {
+	Actor* a;
+	if (PyArg_ParseTuple(args, "K:getActorInfo", &a)) {
+		Vec3* pp = a->getPos();
+		return Py_BuildValue("{s:s,s:[f,f,f],s:i,s:i,s:f,s:f}",
+			"actorname", a->getNameTag().c_str(),
+			"XYZ", pp->x, pp->y, pp->z,
+			"dimensionid", a->getDimensionId(),
+			"isstand", a->isStand(),
+			"health", a->getHealth().first,
+			"maxhealth", a->getHealth().second
+		);
 	}
 	return PyDict_New();
 }
@@ -369,7 +379,6 @@ PyMethodDef m[] = {
    {"logout", api_logout, 1,0},//第3个值:1有参数4无参数,第4个值:描述
    {"runcmd", api_runcmd, 1,0},
    {"setTimeout", api_setTimeout, 1,0},
-   {"UUID", api_UUID, 1,0},
    {"setListener", api_setListener, 1,0},
    {"sendSimpleForm", api_sendSimpleForm, 1,0},
    {"sendModalForm", api_sendModalForm, 1,0},
@@ -377,6 +386,7 @@ PyMethodDef m[] = {
    {"transferServer", api_transferServer, 1,0},
    {"getSelectedItem", api_getSelectedItem, 1,0},
    {"getPlayerInfo", api_getPlayerInfo, 1,0},
+   {"getActorInfo", api_getActorInfo, 1,0},
    {"getPlayerPerm", api_getPlayerPerm, 1,0},
    {"setPlayerPerm",api_setPlayerPerm, 1,0},
    {"addLevel", api_addLevel, 1,0},
@@ -441,7 +451,7 @@ THook(后台输入, bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D
 		init();
 		return false;
 	}
-	CallAll(u8"后台输入", "s", *cmd);
+	CallAll(u8"后台输入", "s", (*cmd).c_str());
 	RET(_this, cmd);
 }
 THook(玩家加入, VA, "?onPlayerJoined@ServerScoreboard@@UEAAXAEBVPlayer@@@Z",
@@ -554,25 +564,19 @@ THook(玩家放入取出, void, "?containerContentChanged@LevelContainerModel@@UEAAXH@
 	BlockPos* bp = (BlockPos*)(a1 + 216);
 	BlockLegacy* bl = bs->getBlock(bp)->getBlockLegacy();
 	short bid = bl->getBlockItemID();
-	string bn = bl->getBlockName();
 	if (bid == 54 || bid == 130 || bid == 146 || bid == -203 || bid == 205 || bid == 218) {	// 非箱子、桶、潜影盒的情况不作处理
 		VA v5 = (*(VA(**)(VA))(*(VA*)a1 + 160))(a1);
 		if (v5) {
-			ItemStack* is = (ItemStack*)(*(VA(**)(VA, VA))(*(VA*)v5 + 40))(v5, slot);
-			auto iid = is->getId();
-			auto iaux = is->getAuxValue();
-			auto isize = is->getStackSize();
-			auto iname = is->getName();
-			auto p = f(Player*, a1 + 208);
+			ItemStack* i = (ItemStack*)(*(VA(**)(VA, VA))(*(VA*)v5 + 40))(v5, slot);
 			CallAll(u8"放入取出", "{s:K,s:s,s:i,s:[i,i,i],s:i,s:i,s:s,s:i,s:i}",
-				"player", p,
-				"blockname", bn.c_str(),
+				"player", f(Player*, a1 + 208),
+				"blockname", bl->getBlockName().c_str(),
 				"blockid", bid,
 				"position", bp->x, bp->y, bp->z,
-				"itemid", iid,
-				"itemcount", isize,
-				"itemname", iname.c_str(),
-				"itemaux", iaux,
+				"itemid", i->getId(),
+				"itemcount", i->getStackSize(),
+				"itemname", i->getName().c_str(),
+				"itemaux", i->getAuxValue(),
 				"slot", slot
 			);
 		}
@@ -600,23 +604,10 @@ THook(生物死亡, void, "?die@Mob@@UEAAXAEBVActorDamageSource@@@Z",
 	char v72;
 	Actor* sa = SYMCALL<Actor*>("?fetchEntity@Level@@QEBAPEAVActor@@UActorUniqueID@@_N@Z",
 		f(VA, _this + 856), *(VA*)((*(VA(__fastcall**)(VA, char*))(*(VA*)dmsg + 64))(dmsg, &v72)), 0);
-	string srcname;
-	string srctype;
-	Vec3 srcp;
-	Vec3* mobp = _this->getPos();
-	if (sa) {
-		srcname = sa->getNameTag();
-		srctype = sa->getEntityTypeName();
-		srcp = *sa->getPos();
-	}
-	CallAll(u8"生物死亡", "{s:s,s:s,s:[f,f,f],s:i,s:s,s:s,s:[f,f,f]}",
-		"srcname", srcname.c_str(),
-		"srctype", srctype.c_str(),
-		"srcpos", srcp.x, srcp.y, srcp.z,
+	CallAll(u8"生物死亡", "{s:i,s:K,s:K}",
 		"dmcase", f(unsigned, dmsg + 8),
-		"mobname", _this->getNameTag().c_str(),
-		"mobtype", _this->getEntityTypeName().c_str(),
-		"mobpos", mobp->x, mobp->y, mobp->z
+		"actor1", _this,
+		"actor2", sa//可能为0
 	);
 	if (res) original(_this, dmsg);
 }
@@ -625,27 +616,13 @@ THook(生物受伤, bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
 	char v72;
 	Actor* sa = SYMCALL<Actor*>("?fetchEntity@Level@@QEBAPEAVActor@@UActorUniqueID@@_N@Z",
 		f(VA, _this + 856), *(VA*)((*(VA(__fastcall**)(VA, char*))(*(VA*)dmsg + 64))(dmsg, &v72)), 0);
-	string srcname;
-	string srctype;
-	Vec3 srcp;
-	Vec3* mobp = _this->getPos();
-	if (sa) {
-		srcname = sa->getNameTag();
-		srctype = sa->getEntityTypeName();
-		srcp = *sa->getPos();
-	}
-	CallAll(u8"生物受伤", "{s:s,s:s,s:[f,f,f],s:i,s:s,s:s,s:[f,f,f],s:i}",
-		"srcname", srcname.c_str(),
-		"srctype", srctype.c_str(),
-		"srcpos", srcp.x, srcp.y, srcp.z,
+	CallAll(u8"生物受伤", "{s:i,s:K,s:K,s:i}",
 		"dmcase", f(unsigned, dmsg + 8),
-		"mobname", _this->getNameTag().c_str(),
-		"mobtype", _this->getEntityTypeName().c_str(),
-		"mobpos", mobp->x, mobp->y, mobp->z,
+		"actor1", _this,
+		"actor2", sa,//可能为0
 		"damage", a3
 	);
-	if (res) original(_this, dmsg, a3, a4, a5);
-	return 0;
+	RET(_this, dmsg, a3, a4, a5);
 }
 THook(玩家重生, void, "?respawn@Player@@UEAAXXZ",
 	Player* p) {
@@ -655,10 +632,10 @@ THook(玩家重生, void, "?respawn@Player@@UEAAXXZ",
 THook(聊天消息, void, "?fireEventPlayerMessage@MinecraftEventing@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@000@Z",
 	VA _this, string& sender, string& target, string& msg, string& style) {
 	CallAll(u8"聊天消息", "{s:s,s:s,s:s,s:s}",
-		"sender", sender,
-		"target", target,
-		"msg", msg,
-		"style", style
+		"sender", sender.c_str(),
+		"target", target.c_str(),
+		"msg", msg.c_str(),
+		"style", style.c_str()
 	);
 	original(_this, sender, target, msg, style);
 }
@@ -680,7 +657,7 @@ THook(玩家输入指令, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentif
 	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
 		_this, id, *((char*)crp + 16));
 	if (p) {
-		string cmd = *(string*)(crp + 40);
+		string cmd = f(string, crp + 40);
 		CallAll(u8"输入指令", "{s:K,s:s}",
 			"player", p,
 			"cmd", cmd.c_str()
@@ -718,7 +695,7 @@ THook(更新命令方块, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentif
 		auto output = f(string, cbp + 96);
 		auto rawname = f(string, cbp + 128);
 		auto delay = f(int, cbp + 160);
-		CallAll(u8"命令方块", "{s:Ks:i,s:i,s:i,s:s,s:s,s:s,s:i,s:[i,i,i]}",
+		CallAll(u8"命令方块更新", "{s:K,s:i,s:i,s:i,s:s,s:s,s:s,s:i,s:[i,i,i]}",
 			"player", p,
 			"mode", mode,
 			"condition", condition,
@@ -732,11 +709,11 @@ THook(更新命令方块, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentif
 		if (res)original(_this, id, cbp);
 	}
 }
-THook(爆炸, bool, "?explode@Level@@QEAAXAEAVBlockSource@@PEAVActor@@AEBVVec3@@M_N3M3@Z",
+THook(爆炸监听, bool, "?explode@Level@@QEAAXAEAVBlockSource@@PEAVActor@@AEBVVec3@@M_N3M3@Z",
 	Level* _this, BlockSource* bs, Actor* a3, const Vec3 pos, float a5, bool a6, bool a7, float a8, bool a9) {
 	if (a3) {
-		CallAll(u8"爆炸", "{s:[f,f,f],s:s,s:i,s:i,s:i}",
-			"XYZ", pos.x, pos.y, pos.z,
+		CallAll(u8"爆炸监听", "{s:[f,f,f],s:s,s:i,s:i,s:i}",
+			"position", pos.x, pos.y, pos.z,
 			"entity", a3->getEntityTypeName().c_str(),
 			"entityid", a3->getEntityTypeId(),
 			"dimensionid", a3->getDimensionId(),
@@ -744,9 +721,9 @@ THook(爆炸, bool, "?explode@Level@@QEAAXAEAVBlockSource@@PEAVActor@@AEBVVec3@@M_
 		);
 		RET(_this, bs, a3, pos, a5, a6, a7, a8, a9);
 	}
-	CallAll(u8"爆炸", "{s:[f,f,f],s:i,s:i}",
+	CallAll(u8"爆炸监听", "{s:[f,f,f],s:i,s:i}",
 		"XYZ", pos.x, pos.y, pos.z,
-		"dimensionid", a3->getDimensionId(),
+		"dimensionid", bs->getDimensionId(),
 		"power", a5
 	);
 	RET(_this, bs, a3, pos, a5, a6, a7, a8, a9);
@@ -764,8 +741,8 @@ THook(命令方块执行, bool, "?performCommand@CommandBlockActor@@QEAA_NAEAVBlockSou
 	BlockPos bp = f(BlockPos, _this + 44);
 	CallAll(u8"命令方块执行", "{s:s,s:s,s:[i,i,i],s:i,s:i}",
 		"cmd", cmd.c_str(),
-		"name", rawname.c_str(),
-		"XYZ", bp.x, bp.y, bp.z,
+		"rawname", rawname.c_str(),
+		"position", bp.x, bp.y, bp.z,
 		"mode", mode,
 		"condition", condition
 	);
@@ -773,7 +750,7 @@ THook(命令方块执行, bool, "?performCommand@CommandBlockActor@@QEAA_NAEAVBlockSou
 }
 #pragma endregion
 void init() {
-	puts("BDSPyrunner v0.0.6 Loading...");
+	puts("BDSPyrunner v0.0.7 Loading...");
 	PyPreConfig cfg;
 	PyPreConfig_InitIsolatedConfig(&cfg);
 	Py_PreInitialize(&cfg);

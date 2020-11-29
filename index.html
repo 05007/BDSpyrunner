@@ -1,542 +1,468 @@
-<!DOCTYPE html
-	PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html lang="zh">
 
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<title>BDSpyrunner</title>
 	<style type="text/css">
-		.ctitle1 {
+		.title {
 			text-align: center;
 		}
 
 		.comment {
-			font-family: 新宋体;
+			font-family: "新宋体";
 			color: #57A64A;
 		}
 
-		.codelet {
-			font-family: 新宋体;
-			color: #0000FF;
-		}
-
 		.string {
-			font-family: 新宋体;
+			font-family: "华文仿宋";
 			color: #D69D85;
 		}
 
 		.listen {
-			font-family: 微软雅黑;
+			font-family: "黑体";
 			font-size: larger;
+			color: #FFB502;
 		}
 	</style>
 </head>
 
 <body>
 	<div id="left" style="position: fixed; width: auto;max-width:12%; height: auto; left: 0px; overflow: scroll;">
-		<p align="center">索引</p>
+		<p class="title">索引</p>
 		<p>
-			<a href="#t_help">帮助文档</a><br />
-			<a href="#explain">一、说明</a><br />
-			<a href="#apititle">二、API接口定义</a><br />
-			<a href="#register">三、注册机制</a><br />
+			<a href="#explain">一、说明</a><br/>
+			<a href="#apititle">二、API接口定义</a><br/>
+			<a href="#register">三、注册机制</a><br/>
 		</p>
 	</div>
 	<div style="width: 85%; margin-left: 15%;">
 
-		<h1 class="ctitle1"><a name="t_help">帮助文档</a></h1>
+		<h1 class="title">帮助文档</h1>
 		<h2><a name="explain">一、说明</a></h2>
 
-		本插件平台使用Cpython作为py解释执行工具。全程采用监听器注册机制以完成特定事件的处理。<br />
-		插件基本运作原理：hook bds事件点位 修改内存属性处理代码 取结果决定是否拦截/继续执行。<br />
-		使用之前 请确保您已了解了python的语法 参见<br />
-		<a href="https://www.runoob.com/python3/python3-tutorial.html">https://www.runoob.com/python3/python3-tutorial.html</a><br />
+		本插件平台使用Cpython作为py解释执行工具。全程采用监听器注册机制以完成特定事件的处理。<br/>
+		插件基本运作原理：hook bds事件点位 修改内存属性处理代码 取结果决定是否拦截/继续执行。<br/>
+		使用之前 请确保您已了解了python的语法 参见<br/>
+		<a href="https://www.runoob.com/python3/python3-tutorial.html">https://www.runoob.com/python3/python3-tutorial.html</a><br/>
 
 		<h2><a name="apititle">二、API接口定义</a></h2>
 
 		<p>(1)setTimeout</p>
 		<span class="comment">
-			// 函数名：setTimeout<br />
-			// 功能：延时执行一个函数<br />
-			// 参数个数：2个<br />
-			// 参数类型：字符串/函数，整型<br />
-			// 参数详解：code - 待延时执行的指令字符串/函数对象，millisec - 延时毫秒数<br />
+			// 函数名：setTimeout<br/>
+			// 功能：延时执行一个函数<br/>
+			// 参数个数：2个<br/>
+			// 参数类型：字符串/函数，整型<br/>
+			// 参数详解：code - 待延时执行的指令字符串/函数对象，millisec - 延时毫秒数<br/>
 		</span>
 		[例] setTimeout(func, 1000)
 
 		<p>(2)setListener</p>
 		<span class="comment">
-			// 函数名：setBeforeActListener<br />
-			// 功能：注册玩家事件加载前监听器<br />
-			// 参数个数：2个<br />
-			// 参数类型：字符串，函数对象<br />
+			// 函数名：setBeforeActListener<br/>
+			// 功能：注册玩家事件加载前监听器<br/>
+			// 参数个数：2个<br/>
+			// 参数类型：字符串，函数对象<br/>
 			// 参数详解：key - 注册用关键字，func - 供事件触发时的回调函数对象
-		</span><br />
+		</span><br/>
 		[例] setBeforeActListener(<span class="string">'聊天消息'</span>,func)
 
 		<p>(3)setCommandDescribe</p>
 		<span class="comment">
-			// 函数名：setCommandDescribe<br />
-			// 功能：设置一个全局指令说明<br />
-			// 参数个数：2个<br />
-			// 参数类型：字符串，字符串<br />
-			// 参数详解：cmd - 命令，description - 命令说明<br />
+			// 函数名：setCommandDescribe<br/>
+			// 功能：设置一个全局指令说明<br/>
+			// 参数个数：2个<br/>
+			// 参数类型：字符串，字符串<br/>
+			// 参数详解：cmd - 命令，description - 命令说明<br/>
 			// 备注：延期注册的情况，可能不会改变客户端界面
-		</span><br />
+		</span><br/>
 		[例] setCommandDescribe(<span class="string">'testcase'</span>,<span class="string">'这是一个测试用例指令说明'</span>)
 
 		<p>(4)runcmd</p>
 		<span class="comment">
-			// 函数名：runcmd<br />
-			// 功能：执行后台指令<br />
-			// 参数个数：1个<br />
-			// 参数类型：字符串<br />
-			// 参数详解：cmd - 语法正确的MC指令<br />
+			// 函数名：runcmd<br/>
+			// 功能：执行后台指令<br/>
+			// 参数个数：1个<br/>
+			// 参数类型：字符串<br/>
+			// 参数详解：cmd - 语法正确的MC指令<br/>
 			// 返回值：是否正常执行
-		</span><br />
+		</span><br/>
 		[例] runcmd(<span class="string">'say python!'</span>)
 
 		<p>(5)logout</p>
 		<span class="comment">
-			// 函数名：logout<br />
-			// 功能：发送一条命令输出消息(可被拦截)<br />
-			// 参数个数：1个<br />
-			// 参数类型：字符串<br />
+			// 函数名：logout<br/>
+			// 功能：发送一条命令输出消息(可被拦截)<br/>
+			// 参数个数：1个<br/>
+			// 参数类型：字符串<br/>
 			// 参数详解：cmdout - 待发送的命令输出字符串
-		</span><br />
+		</span><br/>
 		[例] logout(<span class="string">'执行结果=正确'</span>)
 
 		<p>(6)setNameTag</p>
 		<span class="comment">
-			// 函数名：reNameByUuid<br />
-			// 功能：重命名一个指定的玩家名<br />
-			// 参数个数：2个<br />
-			// 参数类型：字符串，字符串<br />
-			// 参数详解：player - 玩家指针，newName - 新的名称<br />
-			// 返回值：是否命名成功<br />
+			// 函数名：reNameByUuid<br/>
+			// 功能：重命名一个指定的玩家名<br/>
+			// 参数个数：2个<br/>
+			// 参数类型：字符串，字符串<br/>
+			// 参数详解：player - 玩家指针，newName - 新的名称<br/>
+			// 返回值：是否命名成功<br/>
 			// (备注：该函数可能不会变更客户端实际显示名)
-		</span><br />
+		</span><br/>
 		[例] setNameTag(player,<span class="string">'名字'</span>)
 
 		<p>(7)addPlayerItem</p>
 		<span class="comment">
-			// 函数名：addPlayerItem<br />
-			// 功能：增加玩家一个物品<br />
-			// 参数个数：4个<br />
-			// 参数类型：字符串<br />
-			// 参数详解：player - 玩家指针，id - 物品id值，aux - 物品特殊值，count - 数量<br />
-			// 返回值：是否增加成功<br />
+			// 函数名：addPlayerItem<br/>
+			// 功能：增加玩家一个物品<br/>
+			// 参数个数：4个<br/>
+			// 参数类型：字符串<br/>
+			// 参数详解：player - 玩家指针，id - 物品id值，aux - 物品特殊值，count - 数量<br/>
+			// 返回值：是否增加成功<br/>
 			// (备注：特定条件下可能不会变更游戏内实际物品)
-		</span><br />
+		</span><br/>
 		[例] addPlayerItem(player, 9, 0, 32)
 
 		<p>(8)setPlayerBossBar</p>
 		<span class="comment">
-			// 函数名：setPlayerBossBar<br />
-			// 功能：设置玩家自定义血条<br />
-			// 参数个数：3个<br />
-			// 参数类型：字符串，字符串，浮点型<br />
-			// 参数详解：player - 玩家指针，title - 血条标题，percent - 血条百分比<br />
+			// 函数名：setPlayerBossBar<br/>
+			// 功能：设置玩家自定义血条<br/>
+			// 参数个数：3个<br/>
+			// 参数类型：字符串，字符串，浮点型<br/>
+			// 参数详解：player - 玩家指针，title - 血条标题，percent - 血条百分比<br/>
 			// 返回值：是否设置成功
-		</span><br />
+		</span><br/>
 		[例] setPlayerBossBar(player,<span class="string">'标题'</span>, 1.00)
 
 		<p>(9)removePlayerBossBar</p>
 		<span class="comment">
-			// 函数名：removePlayerBossBar<br />
-			// 功能：清除玩家自定义血条<br />
-			// 参数个数：1个<br />
-			// 参数类型：字符串<br />
-			// 参数详解：player - 玩家指针<br />
+			// 函数名：removePlayerBossBar<br/>
+			// 功能：清除玩家自定义血条<br/>
+			// 参数个数：1个<br/>
+			// 参数类型：字符串<br/>
+			// 参数详解：player - 玩家指针<br/>
 			// 返回值：是否清除成功
-		</span><br />
+		</span><br/>
 		[例] removePlayerBossBar(player)
 
 		<p>(10)getPlayerInfo</p>
 		<span class="comment">
-			// 函数名：getPlayerInfo<br />
-			// 功能：查询在线玩家基本信息<br />
-			// 参数个数：1个<br />
-			// 参数类型：字符串<br />
-			// 参数详解：player - 玩家指针<br />
+			// 函数名：getPlayerInfo<br/>
+			// 功能：查询在线玩家基本信息<br/>
+			// 参数个数：1个<br/>
+			// 参数类型：字符串<br/>
+			// 参数详解：player - 玩家指针<br/>
 			// 返回值：玩家基本信息字典
-		</span><br />
-		[例] getPlayerInfo(player)
-
+		</span><br/>
+		[例] getPlayerInfo(player)<br/><br/>
+		注:此函数还有一个版本getActorInfo，用于获取生物数据，不进行玩家检查
+		
 		<p>(11)transferserver</p>
 		<span class="comment">
-			// 函数名：transferserver<br />
-			// 功能：传送玩家至指定服务器<br />
-			// 参数个数：3个<br />
-			// 参数类型：字符串，字符串，整型<br />
-			// 参数详解：player - 玩家指针，addr - 待传服务器，port - 端口<br />
+			// 函数名：transferserver<br/>
+			// 功能：传送玩家至指定服务器<br/>
+			// 参数个数：3个<br/>
+			// 参数类型：字符串，字符串，整型<br/>
+			// 参数详解：player - 玩家指针，addr - 待传服务器，port - 端口<br/>
 			// 返回值：是否传送成功
-		</span><br />
+		</span><br/>
 		[例] transferserver(player,
 		<span class="string">'www.xiafox.com'</span>, 19132)
 
 		<p>(12)teleport</p>
 		<span class="comment">
-			// 函数名：teleport<br />
-			// 功能：传送玩家至指定坐标和维度<br />
-			// 参数个数：5个<br />
-			// 参数类型：字符串，浮点型，浮点型，浮点型，整型<br />
-			// 参数详解：player - 玩家指针，X - x，Y - y，Z - z，dimensionid - 维度ID<br />
+			// 函数名：teleport<br/>
+			// 功能：传送玩家至指定坐标和维度<br/>
+			// 参数个数：5个<br/>
+			// 参数类型：字符串，浮点型，浮点型，浮点型，整型<br/>
+			// 参数详解：player - 玩家指针，X - x，Y - y，Z - z，dimensionid - 维度ID<br/>
 			// 返回值：是否传送成功
-		</span><br />
+		</span><br/>
 		[例] teleport(player, 10, 99, 10, 2)
 
 		<p>(13)talkAs</p>
 		<span class="comment">
-			// 函数名：talkAs<br />
-			// 功能：模拟玩家发送一个文本<br />
-			// 参数个数：2个<br />
-			// 参数类型：字符串，字符串<br />
-			// 参数详解：player - 玩家指针，msg - 待模拟发送的文本<br />
+			// 函数名：talkAs<br/>
+			// 功能：模拟玩家发送一个文本<br/>
+			// 参数个数：2个<br/>
+			// 参数类型：字符串，字符串<br/>
+			// 参数详解：player - 玩家指针，msg - 待模拟发送的文本<br/>
 			// 返回值：是否发送成功
-		</span><br />
+		</span><br/>
 		[例] talkAs(player,<span class="string">'pyr!'</span>)
 
 		<p>(14)runcmdAs</p>
 		<span class="comment">
-			// 函数名：runcmdAs<br />
-			// 功能：模拟玩家执行一个指令<br />
-			// 参数个数：2个<br />
-			// 参数类型：字符串，字符串<br />
-			// 参数详解：player - 玩家指针，cmd - 待模拟执行的指令<br />
+			// 函数名：runcmdAs<br/>
+			// 功能：模拟玩家执行一个指令<br/>
+			// 参数个数：2个<br/>
+			// 参数类型：字符串，字符串<br/>
+			// 参数详解：player - 玩家指针，cmd - 待模拟执行的指令<br/>
 			// 返回值：是否发送成功
-		</span><br />
+		</span><br/>
 		[例] runcmdAs(player,<span class="string">'/me pyr!'</span>)
 
 		<p>(15)sendSimpleForm</p>
 		<span class="comment">
-			// 函数名：sendSimpleForm<br />
-			// 功能：向指定的玩家发送一个简单表单<br />
-			// 参数个数：4个<br />
-			// 参数类型：字符串，字符串，字符串，字符串<br />
-			// 参数详解：player - 玩家指针，title - 表单标题，content - 内容，buttons - 按钮文本数组字符串<br />
+			// 函数名：sendSimpleForm<br/>
+			// 功能：向指定的玩家发送一个简单表单<br/>
+			// 参数个数：4个<br/>
+			// 参数类型：字符串，字符串，字符串，字符串<br/>
+			// 参数详解：player - 玩家指针，title - 表单标题，content - 内容，buttons - 按钮文本数组字符串<br/>
 			// 返回值：创建的表单id，为 0 表示发送失败
-		</span><br />
+		</span><br/>
 		[例] sendSimpleForm(player, <span class="string">'致命选项'</span>, <span class="string">'请选择：'</span>, <span
 			class="string">'[{"text":"生存"},{"text":"死亡"},{"text":"求助"}]'</span>)
 
 		<p>(16)sendModalForm</p>
 		<span class="comment">
-			// 函数名：sendModalForm<br />
-			// 功能：向指定的玩家发送一个模式对话框<br />
-			// 参数个数：5个<br />
-			// 参数类型：字符串，字符串，字符串，字符串，字符串<br />
+			// 函数名：sendModalForm<br/>
+			// 功能：向指定的玩家发送一个模式对话框<br/>
+			// 参数个数：5个<br/>
+			// 参数类型：字符串，字符串，字符串，字符串，字符串<br/>
 			// 参数详解：player - 玩家指针，title - 表单标题，content - 内容，button1 按钮1标题（点击该按钮selected为true），button2
-			按钮2标题（点击该按钮selected为false）<br />
+			按钮2标题（点击该按钮selected为false）<br/>
 			// 返回值：创建的表单id，为 0 表示发送失败
-		</span><br />
+		</span><br/>
 		[例] sendModalForm(player, <span class="string">'没有第三个选项'</span>, <span class="string">'请选择：'</span>, <span class="string">'生存'</span>, <span class="string">'死亡'</span>)
 
 		<p>(17)sendCustomForm</p>
 		<span class="comment">
-			// 函数名：sendCustomForm<br />
-			// 功能：向指定的玩家发送一个自定义表单<br />
-			// 参数个数：2个<br />
-			// 参数类型：字符串，字符串<br />
-			// 参数详解：player - 玩家指针，json - 自定义表单的json字符串(要使用自定义表单类型，参考nk、pm格式或minebbs专栏)<br />
+			// 函数名：sendCustomForm<br/>
+			// 功能：向指定的玩家发送一个自定义表单<br/>
+			// 参数个数：2个<br/>
+			// 参数类型：字符串，字符串<br/>
+			// 参数详解：player - 玩家指针，json - 自定义表单的json字符串(要使用自定义表单类型，参考nk、pm格式或minebbs专栏)<br/>
 			// 返回值：创建的表单id，为 0 表示发送失败
-		</span><br />
+		</span><br/>
 		[例] sendForm(player,<span class="string">'{"content":[{"type":"label","text":"这是一个文本标签"},{"placeholder":"水印文本","default":"","type":"input","text":""},{"default":true,"type":"toggle","text":"开关~或许是吧"},{"min":0.0,"max":10.0,"step":2.0,"default":3.0,"type":"slider","text":"游标滑块！？"},{"default":1,"steps":["Step1","Step2","Step 3"],"type":"step_slider","text":"矩阵滑块？!"},{"default":1,"options":["Option 1","Option2","Option3"],"type":"dropdown","text":"如你所见，下拉框"}], "type":"custom_form","title":"这是一个自定义窗体"}'</span>)
 
 		<p>(18)setPlayerSidebar</p>
 		<span class="comment">
-			// 函数名：setPlayerSidebar<br />
-			// 功能：设置玩家自定义侧边栏临时计分板<br />
-			// 参数个数：3个<br />
-			// 参数类型：字符串，字符串，字符串<br />
-			// 参数详解：player - 玩家指针，title - 侧边栏标题，list - 列表字符串数组<br />
-			// 返回值：是否设置成功<br />
-			// (注：列表总是从第1行开始，总计不超过15行)<br />
+			// 函数名：setPlayerSidebar<br/>
+			// 功能：设置玩家自定义侧边栏临时计分板<br/>
+			// 参数个数：3个<br/>
+			// 参数类型：字符串，字符串，字符串<br/>
+			// 参数详解：player - 玩家指针，title - 侧边栏标题，list - 列表字符串数组<br/>
+			// 返回值：是否设置成功<br/>
+			// (注：列表总是从第1行开始，总计不超过15行)<br/>
 		</span>
 		[例] setPlayerSidebar(player,<span class="string">'自定义侧边栏'</span>, <span class="string">'["第一行", "第二行", "我在哪行?
-			"]'</span>)<br />
+			"]'</span>)<br/>
 
 		<p>(19)removePlayerSidebar</p>
 		<span class="comment">
-			// 函数名：removePlayerSidebar<br />
-			// 功能：清除玩家自定义侧边栏<br />
-			// 参数个数：1个<br />
-			// 参数类型：字符串<br />
-			// 参数详解：player - 玩家指针<br />
-			// 返回值：是否清除成功<br />
+			// 函数名：removePlayerSidebar<br/>
+			// 功能：清除玩家自定义侧边栏<br/>
+			// 参数个数：1个<br/>
+			// 参数类型：字符串<br/>
+			// 参数详解：player - 玩家指针<br/>
+			// 返回值：是否清除成功<br/>
 		</span>
 		[例] removePlayerSidebar(player)
 
 		<h2><a name="register">三、注册机制</a></h2>
 
-		本插件运行平台采用事件驱动机制与游戏进行内容交互。注册监听关键字，通过特定事件被触发后的回传结果，进行判断、执行额外指令来实现插件功能。
+		<span class="string">本插件运行平台采用事件驱动机制与游戏进行内容交互。注册监听关键字，通过特定事件被触发后的回传结果，进行判断、执行额外指令来实现插件功能。<br/>
+		为了最高效率，只有一个数据的监听器不采用字典传递，而是直接传递</span>
 
 		<p class="listen">(1)后台输入</p>
-		拦截可否：是<br />
-		回传数据：<br />
+		拦截可否：是<br/>
+		回传数据：<br/>
 		<span class="string">cmd</span> – 指令数据
 
 		<p class="listen">(2)后台输出</p>
-		拦截可否：是<br />
-		回传数据：<br />
+		拦截可否：是<br/>
+		回传数据：<br/>
 		<span class="string">output</span> – 输出信息
 
 		<p class="listen">(3)选择表单</p>
-		拦截可否：是<br />
-		回传数据：<br />
-		&nbsp;<span class="string">uuid</span> – 玩家uuid信息<br />
-		<span class="string">formid</span> – 表单ID<br />
-		<span class="string">selected</span> – 表单回传的选择项信息<br />
-		<span class="string">playername</span> – 玩家名字<br />
-		<span class="string">dimensionid</span> – 玩家所在维度ID<br />
-		<span class="string">dimension</span> – 玩家所在维度<br />
-		<span class="string">isstand</span> – 玩家是否立足于方块/悬空<br />
-		<span class="string">XYZ</span> – 玩家所处位置<br />
+		拦截可否：是<br/>
+		回传数据：<br/>
+		<span class="string">formid</span> – 表单ID<br/>
+		<span class="string">selected</span> – 表单回传的选择项信息<br/>
+		<span class="string">player</span> - 玩家指针<br/>
+
 		<p class="listen">(4)使用物品</p>
-		拦截可否：是<br />
-		回传数据：<br />
-		<span class="string">position</span> – 操作方块所在位置<br />
-		<span class="string">itemid</span> – 物品ID<br />
-		<span class="string">itemaux</span> – 物品特殊值<br />
-		<span class="string">itemname</span> – 物品名称<br />
-		<span class="string">playername</span> – 玩家名字<br />
-		<span class="string">dimensionid</span> – 玩家所在维度ID<br />
-		<span class="string">dimension</span> – 玩家所在维度<br />
-		<span class="string">isstand</span> – 玩家是否立足于方块/悬空<br />
-		<span class="string">XYZ</span> – 玩家所处位置<br />
+		拦截可否：是<br/>
+		回传数据：<br/>
+		<span class="string">position</span> – 操作方块所在位置<br/>
+		<span class="string">itemid</span> – 物品ID<br/>
+		<span class="string">itemaux</span> – 物品特殊值<br/>
+		<span class="string">itemname</span> – 物品名称<br/>
+		<span class="string">player</span> - 玩家指针<br/>
+<br/>
 		(注：Win10客户端使用物品事件可在单次点击内触发多次，需自行处理事件合并)
 
 		<p class="listen">(5)放置方块</p>
-		拦截可否：是<br />
-		回传数据：<br />
-		<span class="string">position</span> – 操作方块所在位置<br />
-		<span class="string">blockid</span> – 方块ID<br />
-		<span class="string">blockname</span> – 方块名称<br />
-		<span class="string">playername</span> – 玩家名字<br />
-		<span class="string">dimensionid</span> – 玩家所在维度ID<br />
-		<span class="string">dimension</span> – 玩家所在维度<br />
-		<span class="string">isstand</span> – 玩家是否立足于方块/悬空<br />
-		<span class="string">XYZ</span> – 玩家所处位置
+		拦截可否：是<br/>
+		回传数据：<br/>
+		<span class="string">position</span> – 操作方块所在位置<br/>
+		<span class="string">blockid</span> – 方块ID<br/>
+		<span class="string">blockname</span> – 方块名称<br/>
+		<span class="string">player</span> - 玩家指针<br/>
+
 
 		<p class="listen">(6)破坏方块</p>
-		拦截可否：是<br />
-		回传数据：<br />
-		<span class="string">position</span> – 操作方块所在位置<br />
-		<span class="string">blockid</span> – 方块ID<br />
-		<span class="string">blockname</span> – 方块名称<br />
-		<span class="string">playername</span> – 玩家名字<br />
-		<span class="string">dimensionid</span> – 玩家所在维度ID<br />
-		<span class="string">dimension</span> – 玩家所在维度<br />
-		<span class="string">isstand</span> – 玩家是否立足于方块/悬空<br />
-		<span class="string">XYZ</span> – 玩家所处位置
+		拦截可否：是<br/>
+		回传数据：<br/>
+		<span class="string">position</span> – 操作方块所在位置<br/>
+		<span class="string">blockid</span> – 方块ID<br/>
+		<span class="string">blockname</span> – 方块名称<br/>
+		<span class="string">player</span> - 玩家指针<br/>
+
 
 		<p class="listen">(7)打开箱子</p>
-		拦截可否：是<br />
-		回传数据：<br />
-		<span class="string">position</span> – 操作方块所在位置<br />
-		<span class="string">playername</span> – 玩家名字<br />
-		<span class="string">dimensionid</span> – 玩家所在维度ID<br />
-		<span class="string">dimension</span> – 玩家所在维度<br />
-		<span class="string">isstand</span> – 玩家是否立足于方块/悬空<br />
-		<span class="string">XYZ</span> – 玩家所处位置
+		拦截可否：是<br/>
+		回传数据：<br/>
+		<span class="string">position</span> – 操作方块所在位置<br/>
+		<span class="string">player</span> - 玩家指针<br/>
+
 
 		<p class="listen">(8)打开木桶</p>
-		拦截可否：否<br />
-		回传数据：<br />
-		<span class="string">position</span> – 操作方块所在位置<br />
-		<span class="string">playername</span> – 玩家名字<br />
-		<span class="string">dimensionid</span> – 玩家所在维度ID<br />
-		<span class="string">dimension</span> – 玩家所在维度<br />
-		<span class="string">isstand</span> – 玩家是否立足于方块/悬空<br />
-		<span class="string">XYZ</span> – 玩家所处位置
+		拦截可否：否<br/>
+		回传数据：<br/>
+		<span class="string">position</span> – 操作方块所在位置<br/>
+		<span class="string">player</span> - 玩家指针<br/>
+
 
 		<p class="listen">(9)关闭箱子</p>
-		拦截可否：否<br />
-		回传数据：<br />
-		<span class="string">position</span> – 操作方块所在位置<br />
-		<span class="string">playername</span> – 玩家名字<br />
-		<span class="string">dimensionid</span> – 玩家所在维度ID<br />
-		<span class="string">dimension</span> – 玩家所在维度<br />
-		<span class="string">isstand</span> – 玩家是否立足于方块/悬空<br />
-		<span class="string">XYZ</span> – 玩家所处位置
+		拦截可否：否<br/>
+		回传数据：<br/>
+		<span class="string">position</span> – 操作方块所在位置<br/>
+		<span class="string">player</span> - 玩家指针<br/>
+
 
 		<p class="listen">(10)关闭木桶</p>
-		拦截可否：否<br />
-		回传数据：<br />
-		<span class="string">position</span> – 操作方块所在位置<br />
-		<span class="string">playername</span> – 玩家名字<br />
-		<span class="string">dimensionid</span> – 玩家所在维度ID<br />
-		<span class="string">dimension</span> – 玩家所在维度<br />
-		<span class="string">isstand</span> – 玩家是否立足于方块/悬空<br />
-		<span class="string">XYZ</span> – 玩家所处位置
+		拦截可否：否<br/>
+		回传数据：<br/>
+		<span class="string">position</span> – 操作方块所在位置<br/>
+		<span class="string">player</span> - 玩家指针<br/>
+
 
 		<p class="listen">(11)放入取出</p>
-		拦截可否：否<br />
-		回传数据：<br />
-		<span class="string">itemid</span> – 物品ID<br />
-		<span class="string">itemcount</span> – 物品数量<br />
-		<span class="string">itemname</span> – 物品名字<br />
-		<span class="string">itemaux</span> – 物品特殊值<br />
-		<span class="string">position</span> – 操作方块所在位置<br />
-		<span class="string">blockid</span> – 方块ID<br />
-		<span class="string">blockname</span> – 方块名称<br />
-		<span class="string">slot</span> – 操作格子位置<br />
-		<span class="string">playername</span> – 玩家名字<br />
-		<span class="string">dimensionid</span> – 玩家所在维度ID<br />
-		<span class="string">dimension</span> – 玩家所在维度<br />
-		<span class="string">isstand</span> – 玩家是否立足于方块/悬空<br />
-		<span class="string">XYZ</span> – 玩家所处位置
+		拦截可否：否<br/>
+		回传数据：<br/>
+		<span class="string">itemid</span> – 物品ID<br/>
+		<span class="string">itemcount</span> – 物品数量<br/>
+		<span class="string">itemname</span> – 物品名字<br/>
+		<span class="string">itemaux</span> – 物品特殊值<br/>
+		<span class="string">position</span> – 操作方块所在位置<br/>
+		<span class="string">blockid</span> – 方块ID<br/>
+		<span class="string">blockname</span> – 方块名称<br/>
+		<span class="string">slot</span> – 操作格子位置<br/>
+		<span class="string">player</span> - 玩家指针<br/>
+
 
 		<p class="listen">(12)切换纬度</p>
-		拦截可否：否<br />
-		回传数据：<br />
-		<span class="string">position</span> – 玩家所处位置<br />
-		<span class="string">playername</span> – 玩家名字<br />
-		<span class="string">dimensionid</span> – 玩家所在维度ID<br />
-		<span class="string">dimension</span> – 玩家所在维度<br />
-		<span class="string">isstand</span> – 玩家是否立足于方块/悬空<br />
-		<span class="string">XYZ</span> – 玩家所处位置
+		拦截可否：否<br/>
+		回传数据：<br/>
+		<span class="string">player</span> - 玩家指针<br/>
+
 
 		<p class="listen">(13)生物死亡</p>
-		拦截可否：否<br />
-		回传数据：<br />
-		<span class="string">mobname</span> – 生物名称<br />
-		<span class="string">dimensionid</span> – 生物所处维度ID<br />
-		<span class="string">XYZ</span> – 生物所在位置<br />
-		<span class="string">mobtype</span> – 生物类型<br />
-		<span class="string">srcname</span> – 伤害源名称<br />
-		<span class="string">srctype</span> – 伤害源类型<br />
-		<span class="string">dmcase</span> – 伤害具体原因ID<br />
-		<span class="string">playername</span> – 玩家名字(若为玩家死亡，附加此信息)<br />
-		<span class="string">dimension</span> – 玩家所在维度(附加信息)<br />
-		<span class="string">isstand</span> – 玩家是否立足于方块/悬空(附加信息)
+		拦截可否：否<br/>
+		回传数据：<br/>
+		<span class="string">dmcase</span> – 伤害具体原因ID<br/>
+		<span class="string">actor1</span> - 死亡生物指针<br/>
+		<span class="string">actor2</span> - 伤害源生物指针<br/>
 
 		<p class="listen">(14)生物受伤</p>
-		拦截可否：是<br />
-		回传数据：<br />
-		<span class="string">health</span> – 生物血量<br />
-		<span class="string">dmtype</span> – 生物受伤类型<br />
-		<span class="string">dmcount</span> – 生物受伤具体值<br />
-		<span class="string">mobname</span> – 生物名称<br />
-		<span class="string">dimensionid</span> – 生物所处维度ID<br />
-		<span class="string">XYZ</span> – 生物所在位置<br />
-		<span class="string">mobtype</span> – 生物类型<br />
-		<span class="string">srcname</span> – 伤害源名称<br />
-		<span class="string">srctype</span> – 伤害源类型<br />
-		<span class="string">dmcase</span> – 伤害具体原因ID<br />
-		<span class="string">playername</span> – 玩家名字(若为玩家受伤，附加此信息)<br />
-		<span class="string">dimension</span> – 玩家所在维度(附加信息)<br />
-		<span class="string">isstand</span> – 玩家是否立足于方块/悬空(附加信息)
+		拦截可否：是<br/>
+		回传数据：<br/>
+		<span class="string">dmcase</span> – 伤害具体原因ID<br/>
+		<span class="string">actor1</span> - 死亡生物指针<br/>
+		<span class="string">actor2</span> - 伤害源生物指针<br/>
+		<span class="string">damage</span> - 理论伤害值<br/>
 
 		<p class="listen">(15)玩家重生</p>
-		拦截可否：否<br />
-		回传数据： <br />
-		<span class="string">playername</span> – 玩家名字<br />
-		<span class="string">dimensionid</span> – 玩家所在维度ID<br />
-		<span class="string">dimension</span> – 玩家所在维度<br />
-		<span class="string">isstand</span> – 玩家是否立足于方块/悬空<br />
-		<span class="string">XYZ</span> – 玩家所处位置
+		拦截可否：否<br/>
+		回传数据： <br/>
+		<span class="string">player</span> - 玩家指针<br/>
+
 
 		<p class="listen">(16)聊天监听</p>
-		拦截可否：否<br />
-		回传数据：<br />
-		<span class="string">playername</span> – 发言人名字(可能为服务器或命令方块发言)<br />
-		<span class="string">target</span> – 接收者名字<br />
-		<span class="string">msg</span> – 接收到的信息<br />
-		<span class="string">chatstyle</span> – 聊天类型
+		拦截可否：否<br/>
+		回传数据：<br/>
+		<span class="string">sender</span> – 发送者名字<br/>
+		<span class="string">target</span> – 接收者名字<br/>
+		<span class="string">msg</span> – 接收到的信息<br/>
+		<span class="string">style</span> – 聊天类型
 
 		<p class="listen">(17)玩家输入文本</p>
-		拦截可否：是<br />
-		回传数据：<br />
-		<span class="string">msg</span> – 输入的文本<br />
-		<span class="string">playername</span> – 玩家名字<br />
-		<span class="string">dimensionid</span> – 玩家所在维度ID<br />
-		<span class="string">dimension</span> – 玩家所在维度<br />
-		<span class="string">isstand</span> – 玩家是否立足于方块/悬空<br />
-		<span class="string">XYZ</span> – 玩家所处位置
+		拦截可否：是<br/>
+		回传数据：<br/>
+		<span class="string">msg</span> – 输入的文本<br/>
+		<span class="string">player</span> - 玩家指针<br/>
+
 
 		<p class="listen">(18)更新命令方块</p>
-		拦截可否：是<br />
-		回传数据：<br />
-		<span class="string">position</span> – 命令方块所在位置<br />
-		<span class="string">cmd</span> – 将被更新的新指令<br />
-		<span class="string">isblock</span> – 是否是方块<br />
-		<span class="string">actortype</span> – 实体类型(若被更新的是非方块，附加此信息)<br />
-		<span class="string">playername</span> – 玩家名字<br />
-		<span class="string">dimensionid</span> – 玩家所在维度ID<br />
-		<span class="string">dimension</span> – 玩家所在维度<br />
-		<span class="string">isstand</span> – 玩家是否立足于方块/悬空<br />
-		<span class="string">XYZ</span> – 玩家所处位置
+		拦截可否：是<br/>
+		回传数据：<br/>
+		<span class="string">player</span> - 玩家指针<br/>
+		<span class="string">cmd</span> – 将被更新的新指令<br/>
+		<span class="string">mode</span> – 命令方块模式<br/>
+		<span class="string">condition</span> – 是否有条件<br/>
+		<span class="string">redstone</span> – 是否要红石<br/>
+		<span class="string">output</span> – 上一次输出<br/>
+		<span class="string">rawname</span> – 命令方块名字<br/>
+		<span class="string">delay</span> – 延迟<br/>
+		<span class="string">position</span> – 命令方块所在位置<br/>
 
 		<p class="listen">(19)玩家输入指令</p>
-		拦截可否：是<br />
-		回传数据：<br />
-		<span class="string">cmd</span> – 玩家输入的指令<br />
-		<span class="string">playername</span> – 玩家名字<br />
-		<span class="string">dimensionid</span> – 玩家所在维度ID<br />
-		<span class="string">dimension</span> – 玩家所在维度<br />
-		<span class="string">isstand</span> – 玩家是否立足于方块/悬空<br />
-		<span class="string">XYZ</span> – 玩家所处位置
+		拦截可否：是<br/>
+		回传数据：<br/>
+		<span class="string">cmd</span> – 玩家输入的指令<br/>
+		<span class="string">player</span> - 玩家指针<br/>
 
 		<p class="listen">(20)命令方块执行</p>
-		拦截可否：是<br />
-		回传数据：<br />
-		<span class="string">cmd</span> – 将被执行的指令<br />
-		<span class="string">tickdelay</span> – 命令设定的间隔时间<br />
-		<span class="string">type</span> – 执行者类型<br />
-		<span class="string">name</span> – 执行者自定义名称<br />
-		<span class="string">position</span> – 执行者所在位置
+		拦截可否：是<br/>
+		回传数据：<br/>
+		<span class="string">cmd</span> – 将被执行的指令<br/>
+		<!-- <span class="string">(暂时没有)delay</span> – 命令设定的间隔时间<br/> -->
+		<span class="string">rawname</span> – 命令方块名称<br/>
+		<span class="string">position</span> – 执行者所在位置<br/>
+		<span class="string">mode</span> – 命令方块模式<br/>
+		<span class="string">condition</span> – 是否有条件<br/>
 
-		<p class="listen">(21)"onNpcCmd" - NPC执行指令监听</p>
-		拦截可否：是<br />
-		回传数据：<br />
-		<span class="string">position</span> – NPC所在位置<br />
-		<span class="string">entity</span> – NPC实体标识名<br />
-		<span class="string">entityid</span> – NPC实体标识ID<br />
-		<span class="string">npcname</span> – NPC名字<br />
-		<span class="string">dimensionid</span> – NPC所处维度ID<br />
-		<span class="string">dimension</span> – NPC所处维度<br />
-		<span class="string">actionid</span> – 选择项<br />
+		<p class="listen">(21)"没有这个监听！" - NPC执行指令监听</p>
+		拦截可否：是<br/>
+		回传数据：<br/>
+		<span class="string">position</span> – NPC所在位置<br/>
+		<span class="string">entity</span> – NPC实体标识名<br/>
+		<span class="string">entityid</span> – NPC实体标识ID<br/>
+		<span class="string">npcname</span> – NPC名字<br/>
+		<span class="string">dimensionid</span> – NPC所处维度ID<br/>
+		<span class="string">dimension</span> – NPC所处维度<br/>
+		<span class="string">actionid</span> – 选择项<br/>
 		<span class="string">actions</span> – 指令列表
 
 
 		<p class="listen">(22)加载名字</p>
-		拦截可否：否<br />
-		回传数据：<br />
-		<span class="string">playername</span> – 玩家名字<br />
-		<span class="string">uuid</span> – 玩家uuid字符串<br />
-		<span class="string">xuid</span> – 玩家xuid字符串<br />
-		<span class="string">ability</span> – 玩家能力值列表
+		拦截可否：否<br/>
+		回传数据：<br/>
+		<span class="string">player</span> - 玩家指针<br/>
 
 		<p class="listen">(23)离开游戏</p>
-		拦截可否：是<br />
-		回传数据：<br />
-		<span class="string">playername</span> – 玩家名字<br />
-		<span class="string">uuid</span> – 玩家uuid字符串<br />
-		<span class="string">xuid</span> – 玩家xuid字符串<br />
-		<span class="string">ability</span> – 玩家能力值列表
+		拦截可否：是<br/>
+		回传数据：<br/>
+		<span class="string">player</span> - 玩家指针<br/>
 
 		<p class="listen">(25)攻击监听</p>
-		拦截可否：是<br />
-		回传数据：<br />
-		<span class="string">actorname</span> – 被攻击实体名称<br />
-		<span class="string">actortype</span> – 被攻击实体类型<br />
-		<span class="string">position</span> – 玩家所处位置<br />
-		<span class="string">playername</span> – 玩家名字<br />
-		<span class="string">dimensionid</span> – 玩家所在维度ID<br />
-		<span class="string">dimension</span> – 玩家所在维度<br />
-		<span class="string">isstand</span> – 玩家是否立足于方块/悬空<br />
-		<span class="string">XYZ</span> – 玩家所处位置
+		拦截可否：是<br/>
+		回传数据：<br/>
+		<span class="string">actor</span> – 被攻击实体指针<br/>
+		<span class="string">player</span> - 玩家指针<br/>
+
 
 		<p class="listen">(26)爆炸监听</p>
-		拦截可否：是<br />
-		回传数据：<br />
-		<span class="string">position</span> – 爆炸点所在位置<br />
-		<span class="string">entity</span> – 爆炸者实体标识名<br />
-		<span class="string">entityid</span> – 爆炸者实体标识ID<br />
-		<span class="string">dimensionid</span> – 爆炸者所处维度ID<br />
-		<span class="string">dimension</span> – 爆炸者所处维度<br />
-		<span class="string">explodepower</span> – 爆炸强度
+		拦截可否：是<br/>
+		回传数据：<br/>
+		<span class="string">position</span> – 爆炸点所在位置<br/>
+		<span class="string">entity</span> – 爆炸者实体标识名<br/>
+		<span class="string">entityid</span> – 爆炸者实体标识ID<br/>
+		<span class="string">dimensionid</span> – 爆炸者所处维度ID<br/>
+		<span class="string">power</span> – 爆炸强度
 	</div>
 </body>
 

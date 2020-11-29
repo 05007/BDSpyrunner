@@ -37,15 +37,15 @@ struct BlockSource {
 		return SYMCALL<Block*>("?getBlock@BlockSource@@QEBAAEBVBlock@@AEBVBlockPos@@@Z",
 			this, bp);
 	}
+	// 获取方块所处维度
+	int getDimensionId() {	// IDA Dimension::onBlockChanged
+		return f(int, (f(VA, this + 32) + 200));
+	}
 };
 #pragma endregion
 struct Level {};
-struct Vec3 {
-	float x = 0.0f, y = 0.0f, z = 0.0f;
-};
-struct Vec2 {
-	float x = 0.0f, y = 0.0f;
-};
+struct Vec3 { float x = 0.0f, y = 0.0f, z = 0.0f; };
+struct Vec2 { float x = 0.0f, y = 0.0f; };
 struct MobEffectInstance { char fill[0x1C]; };
 struct CompoundTag {
 	string toString() {
@@ -148,8 +148,7 @@ struct ItemStackBase {
 			this, &a);
 	}
 };
-struct ItemStack : ItemStackBase {
-};
+struct ItemStack : ItemStackBase {};
 struct Container {
 	// 获取容器内所有物品
 	auto getSlots() {

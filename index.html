@@ -3,56 +3,58 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 
 <head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<title>BDSpyrunner</title>
-	<style type="text/css">
-		.ctitle1 {
-			text-align: center;
-		}
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>BDSpyrunner</title>
+<style type="text/css">
+.ctitle1 {
+				text-align: center;
+}
 
 		.comment {
-			font-family: 新宋体;
+				font-family: 新宋体;
 			color: #57A64A;
-		}
+}
 
-		.codelet {
-			font-family: 新宋体;
-			color: #0000FF;
-		}
+.codelet {
+				font-family: 新宋体;
+				color: #0000FF;
+}
 
 		.string {
-			font-family: 新宋体;
+				font-family: 新宋体;
 			color: #D69D85;
-		}
+}
 
-		.listen {
-			font-family: 微软雅黑;
-			font-size: larger;
-		}
-	</style>
+.listen {
+				font-family: 微软雅黑;
+				font-size: larger;
+}
+
+</style>
 </head>
 
 <body>
-	<div id="left" style="position: fixed; width: auto;max-width:12%; height: auto; left: 0px; overflow: scroll;">
-		<p align="center">索引</p>
+<div id="left" style="position: fixed; width: auto;max-width:12%; height: auto; left: 0px; overflow: scroll;">
+				<p align="center">索引</p>
 		<p>
 			<a href="#t_help">帮助文档</a><br />
 			<a href="#explain">一、说明</a><br />
 			<a href="#apititle">二、API接口定义</a><br />
 			<a href="#register">三、注册机制</a><br />
-		</p>
-	</div>
-	<div style="width: 85%; margin-left: 15%;">
+</p>
+</div>
+<div style="width: 85%; margin-left: 15%;">
 
-		<h1 class="ctitle1"><a name="t_help">帮助文档</a></h1>
-		<h2><a name="explain">一、说明</a></h2>
+<h1 class="ctitle1"><a name="t_help">帮助文档</a></h1>
+<h2><a name="explain">一、说明</a></h2>
 
 		本插件平台使用Cpython作为py解释执行工具。全程采用监听器注册机制以完成特定事件的处理。<br />
 		插件基本运作原理：hook bds事件点位 修改内存属性处理代码 取结果决定是否拦截/继续执行。<br />
 		使用之前 请确保您已了解了python的语法 参见<br />
 		<a href="https://www.runoob.com/python3/python3-tutorial.html">https://www.runoob.com/python3/python3-tutorial.html</a><br />
 
-		<h2><a name="apititle">二、API接口定义</a></h2>
+<h2><a name="apititle">二、API接口定义</a></h2>
+<h3><a name="api_t1">1.通用数据处理及网络功能</a></h3>
 
 		<p>(1)setTimeout</p>
 		<span class="comment">
@@ -61,7 +63,7 @@
 			// 参数个数：2个<br />
 			// 参数类型：字符串/函数，整型<br />
 			// 参数详解：code - 待延时执行的指令字符串/函数对象，millisec - 延时毫秒数<br />
-		</span>
+</span>
 		[例] setTimeout(func, 1000)
 
 		<p>(2)setListener</p>
@@ -267,8 +269,28 @@
 		</span>
 		[例] removePlayerSidebar(player)
 
-		<h2><a name="register">三、注册机制</a></h2>
+<p>(50)setPlayerSidebar</p>
+<span class="zhushi">// 函数名：setPlayerSidebar<br/>
+// 功能：设置玩家自定义侧边栏临时计分板<br/>
+// 参数个数：3个<br/>
+// 参数类型：字符串，字符串，字符串<br/>
+// 参数详解：uuid - 在线玩家的uuid字符串，title - 侧边栏标题，list - 列表字符串数组<br/>
+// 返回值：是否设置成功<br/>
+// (注：列表总是从第1行开始，总计不超过15行)<br/>
+</span>[例] <span class="codelet">let</span> r = setPlayerSidebar(<span class="codestring">'8f976e22-78bc-3fe1-8ee5-cf5ff56347b9'</span>, 
+<span class="codestring">'自定义侧边栏'</span>, <span class="codestring">'["第一行", "第二行", "我在哪行?    "]'</span>)<br/>
 
+<p>(51)removePlayerSidebar</p>
+<span class="zhushi">// 函数名：removePlayerSidebar<br/>
+// 功能：清除玩家自定义侧边栏<br/>
+// 参数个数：1个<br/>
+// 参数类型：字符串<br/>
+// 参数详解：uuid - 在线玩家的uuid字符串<br/>
+// 返回值：是否清除成功<br/>
+</span>[例] <span class="codelet">let</span> r = removePlayerSidebar(<span class="codestring">'8f976e22-78bc-3fe1-8ee5-cf5ff56347b9'</span>)
+
+<h2><a name="register">三、注册机制</a></h2>
+　　
 		本插件运行平台采用事件驱动机制与游戏进行内容交互。注册监听关键字，通过特定事件被触发后的回传结果，进行判断、执行额外指令来实现插件功能。
 
 		<p class="listen">(1)后台输入</p>
@@ -487,7 +509,7 @@
 		<span class="string">name</span> – 执行者自定义名称<br />
 		<span class="string">position</span> – 执行者所在位置
 
-		<p class="listen">(21)"onNpcCmd" - NPC执行指令监听</p>
+ <p class="listen">(21)"onNpcCmd" - NPC执行指令监听</p>
 		拦截可否：是<br />
 		回传数据：<br />
 		<span class="string">position</span> – NPC所在位置<br />
@@ -499,6 +521,13 @@
 		<span class="string">actionid</span> – 选择项<br />
 		<span class="string">actions</span> – 指令列表
 
+<p class="listen">(22)"onLoadName" - 加载名字监听</p>
+拦截可否：否<br/>
+回传数据：<br/>
+ <span class="codestring">playername</span> – 玩家名字<br/>
+ <span class="codestring">uuid</span> – 玩家uuid字符串<br/>
+ <span class="codestring">xuid</span> – 玩家xuid字符串<br/>
+ <span class="codestring">ability</span> – 玩家能力值列表
 
 		<p class="listen">(22)加载名字</p>
 		拦截可否：否<br />

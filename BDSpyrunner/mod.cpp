@@ -1,10 +1,9 @@
+#include "pch.h"
 #include "BDS.hpp"
-#include <thread>
-#include "Python/Python.h"
 #pragma warning(disable:4996)
 #pragma region 宏定义
 //调用所有函数
-#define CallAll(type,...)								\
+#define CallAll(type,...)							\
 bool res = true;									\
 for (PyObject* fn :PyFuncs[type]) {					\
 	if(PyObject_CallFunction(fn,__VA_ARGS__)==Py_False)res = false;\
@@ -12,34 +11,86 @@ for (PyObject* fn :PyFuncs[type]) {					\
 #define out(...) cout <<__VA_ARGS__<< endl
 //THook返回判断
 #define RET(...) if (!res) return 0;return original(__VA_ARGS__)
-// 创建数据包
-#define	cpkt(pkt,m) SYMCALL<VA>("?createPacket@MinecraftPackets@@SA?AV?$shared_ptr@VPacket@@@std@@W4MinecraftPacketIds@@@Z",&pkt,m)
+#define cpkt(pkt,p)	SYMCALL<VA>("?createPacket@MinecraftPackets@@SA?AV?$shared_ptr@VPacket@@@std@@W4MinecraftPacketIds@@@Z",&pkt, p);
 #pragma endregion
 #pragma region 全局变量
-VA _cmdqueue, _level, _ServerNetworkHandle;
-const VA STD_COUT_HANDLE = f(VA, GetServerSymbol("__imp_?cout@std@@3V?$basic_ostream@DU?$char_traits@D@std@@@1@A"));
-Scoreboard* _scoreboard;//储存计分板名称
-unsigned _formid = 0;//表单ID
-unordered_map<string, vector<PyObject*>> PyFuncs;//Py函数
-unordered_map<Player*, bool> PlayerList;//玩家列表
-unordered_map<string, string> Command;//注册命令
+static VA _cmdqueue, _level, _ServerNetworkHandle;
+static const VA STD_COUT_HANDLE = f(VA, GetServerSymbol("__imp_?cout@std@@3V?$basic_ostream@DU?$char_traits@D@std@@@1@A"));
+static Scoreboard* _scoreboard;//储存计分板名称
+static unsigned _formid = 1;//表单ID
+static unordered_map<string, vector<PyObject*>> PyFuncs;//Py函数
+static unordered_map<Player*, bool> PlayerList;//玩家列表
+static unordered_map<string, string> Command;//注册命令
+static Player* _p;//临时
 #pragma endregion
 #pragma region 函数定义
 void init();
-// 判断指针是否为玩家列表中指针
-inline bool PlayerCheck(void* p) {
+static inline bool PlayerCheck(void* p) {
 	return PlayerList[(Player*)p];
 }
-// 多线程延时
-void delay(int time, PyObject* func) {
+static void setTimeout(int time, PyObject* func) {
 	Sleep(time);
 	if (PyCallable_Check(func))
 		PyObject_CallFunction(func, 0);
-	else
-		Py_DECREF(func);
 }
-// 设置侧边栏
-bool setSidebar(Player* p, string title, string name) {
+static unsigned ModalFormRequestPacket(Player* p, string str) {
+	unsigned fid = _formid++;
+	if (PlayerCheck(_p)) {
+		VA pkt;//ModalFormRequestPacket
+		cpkt(pkt, 100);
+		f(unsigned, pkt + 40) = fid;
+		f(string, pkt + 48) = str;
+		_p->sendPacket(pkt);
+	}
+	return fid;
+}
+static bool TransferPacket(Player* p, string address, int port) {
+	if (PlayerCheck(_p)) {
+		VA pkt;//TransferPacket
+		cpkt(pkt, 85);
+		f(string, pkt + 40) = address;
+		f(VA, pkt + 72) = port;
+		_p->sendPacket(pkt);
+		return true;
+	}
+	return false;
+}
+static bool TextPacket(Player* p, int mode, string name) {
+	if (PlayerCheck(p)) {
+		VA pkt;//TextPacket
+		cpkt(pkt, 9);
+		f(char, pkt + 40) = mode;
+		f(string, pkt + 48) = p->getNameTag();
+		f(string, pkt + 80) = name;
+		p->sendPacket(pkt);
+		return true;
+	}
+	return false;
+}
+static bool CommandRequestPacket(Player* p, string cmd) {
+	if (PlayerCheck(p)) {
+		VA pkt;//CommandRequestPacket
+		cpkt(pkt, 77);
+		f(string, pkt + 40) = cmd;
+		p->sendPacket(pkt);
+		return true;
+	}
+	return false;
+}
+static bool BossEventPacket(Player* p, string name, float per, int eventtype) {
+	if (PlayerCheck(p)) {
+		VA pkt;//BossEventPacket
+		cpkt(pkt, 74);
+		f(VA, pkt + 48) = f(VA, pkt + 56) = f(VA, p->getUniqueID());
+		f(int, pkt + 64) = eventtype;//0显示,1更新,2隐藏,
+		f(string, pkt + 72) = name;
+		f(float, pkt + 104) = per;
+		p->sendPacket(pkt);
+		return true;
+	}
+	return false;
+}
+static bool setSidebar(Player* p, string title, string name) {
 	if (PlayerCheck(p)) {
 		VA pkt;//setDisplayObjectivePacket
 		cpkt(pkt, 107);
@@ -55,9 +106,9 @@ bool setSidebar(Player* p, string title, string name) {
 #pragma endregion
 #pragma region api函数
 // 指令输出
-PyObject* api_logout(PyObject* self, PyObject* args) {
+static PyObject* api_logout(PyObject* self, PyObject* args) {
 	const char* msg;
-	if (PyArg_ParseTuple(args, "s", &msg)) {
+	if (PyArg_ParseTuple(args, "s:logout", &msg)) {
 		SYMCALL<VA>("??$_Insert_string@DU?$char_traits@D@std@@_K@std@@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@0@AEAV10@QEBD_K@Z",
 			STD_COUT_HANDLE, msg, strlen(msg));
 		return Py_True;
@@ -65,9 +116,9 @@ PyObject* api_logout(PyObject* self, PyObject* args) {
 	return Py_False;
 }
 // 执行指令
-PyObject* api_runcmd(PyObject* self, PyObject* args) {
+static PyObject* api_runcmd(PyObject* self, PyObject* args) {
 	const char* cmd;
-	if (PyArg_ParseTuple(args, "s", &cmd)) {
+	if (PyArg_ParseTuple(args, "s:runcmd", &cmd)) {
 		SYMCALL<bool>("??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@AEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
 			_cmdqueue, (string)cmd);
 		return Py_True;
@@ -75,73 +126,70 @@ PyObject* api_runcmd(PyObject* self, PyObject* args) {
 	return Py_False;
 }
 // 延时
-PyObject* api_setTimeout(PyObject* self, PyObject* args) {
+static PyObject* api_setTimeout(PyObject* self, PyObject* args) {
 	int time; PyObject* func;
-	if (PyArg_ParseTuple(args, "Oi", &func, &time)) {
-		thread(delay, time, func).detach();
+	if (PyArg_ParseTuple(args, "Oi:setTimeout", &func, &time)) {
+		thread(setTimeout, time, func).detach();
 	}
 	return Py_None;
 }
 // 获取uuid
-PyObject* api_UUID(PyObject* self, PyObject* args) {
-	const char* name;
-	if (PyArg_ParseTuple(args, "s", &name))
-		for (auto& p : PlayerList) {
-			if (p.first->getNameTag() == name)
-				return Py_BuildValue("s", p.first->getUuid().c_str());
-		}
-	return Py_None;
+static PyObject* api_UUID(PyObject* self, PyObject* args) {
+	if (PyArg_ParseTuple(args, "K:UUID", &_p))
+		if (PlayerCheck(_p))
+			return PyUnicode_FromString(_p->getUuid().c_str());
+	return PyUnicode_FromString("");
 }
 // 设置监听
-PyObject* api_setListener(PyObject* self, PyObject* args) {
+static PyObject* api_setListener(PyObject* self, PyObject* args) {
 	const char* m;
 	PyObject* func;
-	if (PyArg_ParseTuple(args, "sO", &m, &func) && PyCallable_Check(func)) {
+	if (PyArg_ParseTuple(args, "sO:setListener", &m, &func) && PyCallable_Check(func)) {
 		PyFuncs[m].push_back(func);
 		return Py_True;
 	}
 	return Py_False;
 }
 // 发送表单
-PyObject* api_sendForm(PyObject* self, PyObject* args) {
-	Player* p;
+static PyObject* api_sendCustomForm(PyObject* self, PyObject* args) {
 	const char* str;
-	if (PyArg_ParseTuple(args, "Ks", &p, &str)) {
-		unsigned fid = _formid++;
-		if (PlayerCheck(p)) {
-			VA pkt;//ModalFormRequestPacket
-			cpkt(pkt, 100);
-			f(unsigned, pkt + 40) = fid;
-			f(string, pkt + 48) = str;
-			p->sendPacket(pkt);
-		}
-		return Py_BuildValue("i", fid);
+	if (PyArg_ParseTuple(args, "Ks:sendCustomForm", &_p, &str)) {
+		return PyLong_FromLong(ModalFormRequestPacket(_p, str));
 	}
-	return Py_None;
+	return PyLong_FromLong(0);
+}
+static PyObject* api_sendSimpleForm(PyObject* self, PyObject* args) {
+	const char* title, * content,* buttons;
+	if (PyArg_ParseTuple(args, "Ksss:sendSimpleForm", &_p, &title, &content, &buttons)) {
+		char str[512];
+		sprintf(str, R"({"title":"%s","content":"%s","buttons":%s,"type":"form"})", title, content, buttons);
+		return PyLong_FromLong(ModalFormRequestPacket(_p, str));
+	}
+	return PyLong_FromLong(0);
+}
+static PyObject* api_sendModalForm(PyObject* self, PyObject* args) {
+	const char* title, * content, * button1, * button2;
+	if (PyArg_ParseTuple(args, "Kssss:sendModalForm", &_p, &title, &content, &button1, &button2)) {
+		char str[512];
+		sprintf(str, R"({"title":"%s","content":"%s","button1":"%s","button2":"%s","type":"modal"})", title, content, button1, button2);
+		return PyLong_FromLong(ModalFormRequestPacket(_p, str));
+	}
+	return PyLong_FromLong(0);
 }
 // 跨服传送
-PyObject* api_transferServer(PyObject* self, PyObject* args) {
-	Player* p;
-	const char* address;
-	int port;
-	if (PyArg_ParseTuple(args, "Ksi", &p, &address, &port)) {
-		if (PlayerCheck(p)) {
-			VA pkt;//TransferPacket
-			cpkt(pkt, 85);
-			f(string, pkt + 40) = address;
-			f(VA, pkt + 72) = port;
-			p->sendPacket(pkt);
+static PyObject* api_transferServer(PyObject* self, PyObject* args) {
+	const char* address; int port;
+	if (PyArg_ParseTuple(args, "Ksi:transferServer", &_p, &address, &port)) {
+		if (TransferPacket(_p, address, port))
 			return Py_True;
-		}
 	}
 	return Py_False;
 }
 // 获取玩家手持
-PyObject* api_getHand(PyObject* self, PyObject* args) {
-	Player* p;
-	if (PyArg_ParseTuple(args, "K", &p)) {
-		if (PlayerCheck(p)) {
-			ItemStack* item = p->getSelectedItem();
+static PyObject* api_getSelectedItem(PyObject* self, PyObject* args) {
+	if (PyArg_ParseTuple(args, "K:getSelectedItem", &_p)) {
+		if (PlayerCheck(_p)) {
+			ItemStack* item = _p->getSelectedItem();
 			short iaux = item->getAuxValue();
 			short iid = item->getId();
 			string iname = item->getName();
@@ -152,107 +200,99 @@ PyObject* api_getHand(PyObject* self, PyObject* args) {
 			);
 		}
 	}
-	return Py_None;
+	return PyDict_New();
 }
 // 获取玩家信息
-PyObject* api_getPlayerInfo(PyObject* self, PyObject* args) {
-	Player* p;
-	if (PyArg_ParseTuple(args, "K", &p)) {
-		if (PlayerCheck(p)) {
-			Vec3* pp = p->getPos();
+static PyObject* api_getPlayerInfo(PyObject* self, PyObject* args) {
+	if (PyArg_ParseTuple(args, "K:getPlayerInfo", &_p)) {
+		if (PlayerCheck(_p)) {
+			Vec3* pp = _p->getPos();
 			return Py_BuildValue("{s:s,s:[f,f,f],s:i,s:i,s:f}",
-				"playername", p->getNameTag().c_str(),
+				"playername", _p->getNameTag().c_str(),
 				"XYZ", pp->x, pp->y, pp->z,
-				"dimensionid", p->getDimensionId(),
-				"isstand", p->isStand(),
-				"health", p->getHealth().first
+				"dimensionid", _p->getDimensionId(),
+				"isstand", _p->isStand(),
+				"health", _p->getHealth().first
 			);
 		}
 	}
-	return Py_None;
+	return PyDict_New();
 }
 // 获取玩家权限
-PyObject* api_getPlayerPerm(PyObject* self, PyObject* args) {
-	Player* p;
-	if (PyArg_ParseTuple(args, "K", &p)) {
-		if (PlayerCheck(p)) {
-			return Py_BuildValue("i", p->getPermission());
+static PyObject* api_getPlayerPerm(PyObject* self, PyObject* args) {
+	if (PyArg_ParseTuple(args, "K:getPlayerPerm", &_p)) {
+		if (PlayerCheck(_p)) {
+			return PyLong_FromLong(_p->getPermission());
 		}
 	}
-	return Py_None;
+	return PyLong_FromLong(-1);
 }
 // 设置玩家权限
-PyObject* api_setPlayerPerm(PyObject* self, PyObject* args) {
-	Player* p;
+static PyObject* api_setPlayerPerm(PyObject* self, PyObject* args) {
 	int lv;
-	if (PyArg_ParseTuple(args, "Ki", &p, &lv)) {
-		if (PlayerCheck(p)) {
-			p->setPermissionLevel(lv);
+	if (PyArg_ParseTuple(args, "Ki:setPlayerPerm", &_p, &lv)) {
+		if (PlayerCheck(_p)) {
+			_p->setPermissionLevel(lv);
 			return Py_True;
 		}
 	}
 	return Py_False;
 }
 // 增加玩家等级
-PyObject* api_addLevel(PyObject* self, PyObject* args) {
-	Player* p;
-	int lv = 0;
-	if (PyArg_ParseTuple(args, "Ki", &p, &lv)) {
-		if (PlayerCheck(p)) {
-			SYMCALL<void>("?addLevels@Player@@UEAAXH@Z", p, lv);
+static PyObject* api_addLevel(PyObject* self, PyObject* args) {
+	int lv;
+	if (PyArg_ParseTuple(args, "Ki::addLevel", &_p, &lv)) {
+		if (PlayerCheck(_p)) {
+			SYMCALL<void>("?addLevels@Player@@UEAAXH@Z", _p, lv);
 			return Py_True;
 		}
 	}
 	return Py_False;
 }
 // 设置玩家名字
-PyObject* api_setNameTag(PyObject* self, PyObject* args) {
-	Player* p;
+static PyObject* api_setName(PyObject* self, PyObject* args) {
 	const char* name;
-	if (PyArg_ParseTuple(args, "Ks", &p, &name)) {
-		if (PlayerCheck(p)) {
-			p->setName(name);
+	if (PyArg_ParseTuple(args, "Ks:setName", &_p, &name)) {
+		if (PlayerCheck(_p)) {
+			_p->setName(name);
 			return Py_True;
 		}
 	}
 	return Py_False;
 }
 // 设置指令说明
-PyObject* api_setCommandDescribe(PyObject* self, PyObject* args) {
-	const char* cmd;
-	const char* des;
-	if (PyArg_ParseTuple(args, "ss", &cmd, &des)) {
+static PyObject* api_setCommandDescribe(PyObject* self, PyObject* args) {
+	const char* cmd, * des;
+	if (PyArg_ParseTuple(args, "ss:setCommandDescribe", &cmd, &des)) {
 		Command[cmd] = des;
 		return Py_True;
 	}
 	return Py_False;
 }
 // 玩家分数
-PyObject* api_getPlayerScore(PyObject* self, PyObject* args) {
-	Player* p;
+static PyObject* api_getPlayerScore(PyObject* self, PyObject* args) {
 	const char* obj;
-	if (PyArg_ParseTuple(args, "Ks", &p, &obj)) {
-		if (PlayerCheck(p)) {
+	if (PyArg_ParseTuple(args, "Ks:getPlayerScore", &_p, &obj)) {
+		if (PlayerCheck(_p)) {
 			Objective* testobj = _scoreboard->getObjective(obj);
 			if (testobj) {
-				auto id = _scoreboard->getScoreboardId(p);
+				auto id = _scoreboard->getScoreboardId(_p);
 				auto score = testobj->getPlayerScore(id);
-				return Py_BuildValue("i", score->getCount());
+				return PyLong_FromLong(score->getCount());
 			}
 			out("bad objective:" << obj);
 		}
 	}
-	return Py_BuildValue("i", 0);
+	return PyLong_FromLong(0);
 }
-PyObject* api_modifyPlayerScore(PyObject* self, PyObject* args) {
-	Player* p;
+static PyObject* api_modifyPlayerScore(PyObject* self, PyObject* args) {
 	const char* obj; int count; char mode;
-	if (PyArg_ParseTuple(args, "Ksii", &p, &obj, &count, &mode)) {
-		if (PlayerCheck(p)) {
+	if (PyArg_ParseTuple(args, "Ksii:modifyPlayerScore", &_p, &obj, &count, &mode)) {
+		if (PlayerCheck(_p)) {
 			Objective* testobj = _scoreboard->getObjective(obj);
 			if (testobj) {
 				//mode:{set,add,remove}
-				_scoreboard->modifyPlayerScore((ScoreboardId*)_scoreboard->getScoreboardId(p), testobj, count, mode);
+				_scoreboard->modifyPlayerScore((ScoreboardId*)_scoreboard->getScoreboardId(_p), testobj, count, mode);
 				return Py_True;
 			}
 			else out("bad objective:" << obj);
@@ -261,74 +301,68 @@ PyObject* api_modifyPlayerScore(PyObject* self, PyObject* args) {
 	return Py_False;
 }
 // 模拟玩家发送文本
-PyObject* api_talkAs(PyObject* self, PyObject* args) {
-	Player* p;
+static PyObject* api_talkAs(PyObject* self, PyObject* args) {
 	const char* msg;
-	if (PyArg_ParseTuple(args, "Ks", &p, &msg)) {
-		if (PlayerCheck(p)) {	// IDA ServerNetworkHandler::handle
-			VA pkt;//TextPacket
-			cpkt(pkt, 9);
-			f(char, pkt + 40) = 1;
-			f(string, pkt + 48) = p->getNameTag();
-			f(string, pkt + 80) = msg;
-			p->sendPacket(pkt);
+	if (PyArg_ParseTuple(args, "Ks:talkAs", &_p, &msg)) {
+		if (TextPacket(_p, 1, msg))
 			return Py_True;
-		}
 	}
 	return Py_False;
 }
 // 模拟玩家执行指令
-PyObject* api_runcmdAs(PyObject* self, PyObject* args) {
-	Player* p;
+static PyObject* api_runcmdAs(PyObject* self, PyObject* args) {
 	const char* cmd;
-	if (PyArg_ParseTuple(args, "Ks", &p, &cmd)) {
-		if (PlayerCheck(p)) {
-			VA pkt;//CommandRequestPacket
-			cpkt(pkt, 76);
-			f(string, pkt + 40) = cmd;
+	if (PyArg_ParseTuple(args, "Ks:runcmdAs", &_p, &cmd)) {
+		if (CommandRequestPacket(_p, cmd))
 			return Py_True;
-		}
 	}
 	return Py_False;
 }
 // 传送玩家
-PyObject* api_teleport(PyObject* self, PyObject* args) {
-	Player* p; float x, y, z; int did;
-	if (PyArg_ParseTuple(args, "Kfffi", &p, &x, &y, &z, &did)) {
-		p->teleport({ x,y,z }, did);
+static PyObject* api_teleport(PyObject* self, PyObject* args) {
+	float x, y, z; int did;
+	if (PyArg_ParseTuple(args, "Kfffi:teleport", &_p, &x, &y, &z, &did)) {
+		_p->teleport({ x,y,z }, did);
 		return Py_True;
 	}
 	return Py_False;
 }
 // 原始输出
-PyObject* api_tellraw(PyObject* self, PyObject* args) {
-	Player* p;
+static PyObject* api_tellraw(PyObject* self, PyObject* args) {
 	const char* msg;
-	if (PyArg_ParseTuple(args, "Ks", &p, &msg)) {
-		if (PlayerCheck(p)) {	// IDA ServerNetworkHandler::handle
-			VA pkt;//TextPacket
-			cpkt(pkt, 9);
-			f(char, pkt + 40) = 0;
-			f(string, pkt + 48) = p->getNameTag();
-			f(string, pkt + 80) = msg;
-			p->sendPacket(pkt);
+	if (PyArg_ParseTuple(args, "Ks:tellraw", &_p, &msg)) {
+		if (TextPacket(_p, 0, msg))
 			return Py_True;
-		}
 	}
 	return Py_False;
 }
-// 设置侧边栏
-PyObject* api_addItem(PyObject* self, PyObject* args) {
-	Player* p;
+// 增加物品
+static PyObject* api_addItem(PyObject* self, PyObject* args) {
 	int id, aux, count;
-	if (PyArg_ParseTuple(args, "Kiii", &p, &id, &aux, &count)) {
-		if (PlayerCheck(p)) {
+	if (PyArg_ParseTuple(args, "Kiii:addItem", &_p, &id, &aux, &count)) {
+		if (PlayerCheck(_p)) {
 			ItemStack item;
 			item.getFromId(id, aux, count);
-			p->addItem(&item);
+			_p->addItem(&item);
 		}
 	}
 	return Py_None;
+}
+// boss栏
+static PyObject* api_setBossBar(PyObject* self, PyObject* args) {
+	const char* name; float per;
+	if (PyArg_ParseTuple(args, "Ksf:", &_p, &name, &per)) {
+		if (BossEventPacket(_p, name, per, 0))
+			return Py_True;
+	}
+	return Py_False;
+}
+static PyObject* api_removeBossBar(PyObject* self, PyObject* args) {
+	if (PyArg_ParseTuple(args, "K:removeBossBar", &_p)) {
+		if (BossEventPacket(_p, "", 0.0, 2))
+			return Py_True;
+	}
+	return Py_False;
 }
 // 方法列表
 PyMethodDef m[] = {
@@ -337,14 +371,16 @@ PyMethodDef m[] = {
    {"setTimeout", api_setTimeout, 1,0},
    {"UUID", api_UUID, 1,0},
    {"setListener", api_setListener, 1,0},
-   {"sendForm", api_sendForm, 1,0},
+   {"sendSimpleForm", api_sendSimpleForm, 1,0},
+   {"sendModalForm", api_sendModalForm, 1,0},
+   {"sendCustomForm", api_sendCustomForm, 1,0},
    {"transferServer", api_transferServer, 1,0},
-   {"getHand", api_getHand, 1,0},
+   {"getSelectedItem", api_getSelectedItem, 1,0},
    {"getPlayerInfo", api_getPlayerInfo, 1,0},
    {"getPlayerPerm", api_getPlayerPerm, 1,0},
    {"setPlayerPerm",api_setPlayerPerm, 1,0},
    {"addLevel", api_addLevel, 1,0},
-   {"setNameTag", api_setNameTag, 1,0},
+   {"setName", api_setName, 1,0},
    {"setCommandDescribe", api_setCommandDescribe, 1,0},
    {"modifyPlayerScore", api_modifyPlayerScore, 1,0},
    {"getPlayerScore", api_getPlayerScore, 1,0},
@@ -353,6 +389,8 @@ PyMethodDef m[] = {
    {"teleport", api_teleport, 1,0},
    {"tellraw", api_tellraw, 1,0},
    {"addItem", api_addItem, 1,0},
+   {"setBossBar", api_setBossBar, 1,0},
+   {"removeBossBar", api_removeBossBar, 1,0},
    {0,0,0,0}
 };
 // 模块声明
@@ -420,8 +458,7 @@ THook(玩家离开游戏, void, "?_onPlayerLeft@ServerNetworkHandler@@AEAAXPEAVServerP
 }
 THook(玩家捡起物品, bool, "?take@Player@@QEAA_NAEAVActor@@HH@Z",
 	Player* p, Actor* a, VA a3, VA a4) {
-	//getPlayerInfo(p);
-	//CallAll("Take","");
+	CallAll(u8"捡起物品", "");
 	return original(p, a, a3, a4);
 }
 THook(玩家操作物品, bool, "?useItemOn@GameMode@@UEAA_NAEAVItemStack@@AEBVBlockPos@@EAEBVVec3@@PEBVBlock@@@Z",
@@ -736,20 +773,20 @@ THook(命令方块执行, bool, "?performCommand@CommandBlockActor@@QEAA_NAEAVBlockSou
 }
 #pragma endregion
 void init() {
-	puts("BDSPyrunner v0.0.5 Loading...");
+	puts("BDSPyrunner v0.0.6 Loading...");
 	PyPreConfig cfg;
 	PyPreConfig_InitIsolatedConfig(&cfg);
 	Py_PreInitialize(&cfg);
 	PyImport_AppendInittab("mc", [] {return PyModule_Create(&mc); }); //增加一个模块
 	Py_Initialize();
-	_finddata64i32_t fileinfo;//用于查找的句柄
-	long long handle = _findfirst64i32("./py/*.py", &fileinfo);
+	_finddata_t fileinfo;//用于查找的句柄
+	long long handle = _findfirst("./py/*.py", &fileinfo);
 	if (handle != -1) {
 		do {
 			Py_NewInterpreter();
-			out(u8"读取Py文件:" << fileinfo.name);;
+			printf("Reading Python file : %s\n", fileinfo.name);
 			PyRun_SimpleFileExFlags(fopen(("./py/" + (string)fileinfo.name).c_str(), "rb"), fileinfo.name, 1, 0);
-		} while (!_findnext64i32(handle, &fileinfo));
+		} while (!_findnext(handle, &fileinfo));
 		_findclose(handle);
 	}
 	else puts(u8"没有找到目录");

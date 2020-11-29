@@ -2,7 +2,13 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <iostream>
+#include <fstream>
 #include <string>
+#include <thread>
+#include <vector>
+#include <unordered_map>
+#include "Python/Python.h"
+//#include "head/ArduinoJson.h"
 using VA = unsigned long long;
 extern "C" {
 	_declspec(dllimport) int HookFunction(void* oldfunc, void** poutold, void* newfunc);

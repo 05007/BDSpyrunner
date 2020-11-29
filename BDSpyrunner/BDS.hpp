@@ -1,10 +1,8 @@
 #pragma once
 #include "pch.h"
-#include <vector>
-#include <unordered_map>
 #define f(type,ptr) (*(type*)(ptr))
 using namespace std;
-#pragma region ·½¿é
+#pragma region Block
 struct BlockLegacy {
 	string getBlockName() {
 		return f(string, this + 120);

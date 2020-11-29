@@ -32,17 +32,14 @@
 #endif
 #endif
 #if !defined(ARDUINOJSON_ENABLE_STD_STREAM) && defined(__has_include)
-#if __has_include(<istream>) && \
-    __has_include(<ostream>) && \
-    !defined(min) && \
-    !defined(max)
+#if __has_include(<istream>) &&  __has_include(<ostream>)
 #define ARDUINOJSON_ENABLE_STD_STREAM 1
 #else
 #define ARDUINOJSON_ENABLE_STD_STREAM 0
 #endif
 #endif
 #if !defined(ARDUINOJSON_ENABLE_STD_STRING) && defined(__has_include)
-#if __has_include(<string>) && !defined(min) && !defined(max)
+#if __has_include(<string>)// && !defined(min) && !defined(max)
 #define ARDUINOJSON_ENABLE_STD_STRING 1
 #else
 #define ARDUINOJSON_ENABLE_STD_STRING 0
@@ -187,49 +184,7 @@
 #define ARDUINOJSON_EXPAND6(a, b, c, d, e, f) a, b, c, d, e, f
 #define ARDUINOJSON_EXPAND7(a, b, c, d, e, f, g) a, b, c, d, e, f, g
 #define ARDUINOJSON_EXPAND9(a, b, c, d, e, f, g, h, i) a, b, c, d, e, f, g, h, i
-#define ARDUINOJSON_EXPAND18(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, \
-                             q, r)                                           \
-  a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r
-#define ARDUINOJSON_CONCAT_(A, B) A##B
-#define ARDUINOJSON_CONCAT2(A, B) ARDUINOJSON_CONCAT_(A, B)
-#define ARDUINOJSON_CONCAT4(A, B, C, D) \
-  ARDUINOJSON_CONCAT2(ARDUINOJSON_CONCAT2(A, B), ARDUINOJSON_CONCAT2(C, D))
-#define ARDUINOJSON_HEX_DIGIT_0000() 0
-#define ARDUINOJSON_HEX_DIGIT_0001() 1
-#define ARDUINOJSON_HEX_DIGIT_0010() 2
-#define ARDUINOJSON_HEX_DIGIT_0011() 3
-#define ARDUINOJSON_HEX_DIGIT_0100() 4
-#define ARDUINOJSON_HEX_DIGIT_0101() 5
-#define ARDUINOJSON_HEX_DIGIT_0110() 6
-#define ARDUINOJSON_HEX_DIGIT_0111() 7
-#define ARDUINOJSON_HEX_DIGIT_1000() 8
-#define ARDUINOJSON_HEX_DIGIT_1001() 9
-#define ARDUINOJSON_HEX_DIGIT_1010() A
-#define ARDUINOJSON_HEX_DIGIT_1011() B
-#define ARDUINOJSON_HEX_DIGIT_1100() C
-#define ARDUINOJSON_HEX_DIGIT_1101() D
-#define ARDUINOJSON_HEX_DIGIT_1110() E
-#define ARDUINOJSON_HEX_DIGIT_1111() F
-#define ARDUINOJSON_HEX_DIGIT_(A, B, C, D) ARDUINOJSON_HEX_DIGIT_##A##B##C##D()
-#define ARDUINOJSON_HEX_DIGIT(A, B, C, D) ARDUINOJSON_HEX_DIGIT_(A, B, C, D)
-#define ARDUINOJSON_VERSION "6.17.1"
-#define ARDUINOJSON_VERSION_MAJOR 6
-#define ARDUINOJSON_VERSION_MINOR 17
-#define ARDUINOJSON_VERSION_REVISION 1
-#ifndef ARDUINOJSON_NAMESPACE
-#define ARDUINOJSON_NAMESPACE                                                  \
-  ARDUINOJSON_CONCAT4(                                                         \
-      ARDUINOJSON_CONCAT4(ArduinoJson, ARDUINOJSON_VERSION_MAJOR,              \
-                          ARDUINOJSON_VERSION_MINOR,                           \
-                          ARDUINOJSON_VERSION_REVISION),                       \
-      _,                                                                       \
-      ARDUINOJSON_HEX_DIGIT(ARDUINOJSON_ENABLE_PROGMEM,                        \
-                            ARDUINOJSON_USE_LONG_LONG, ARDUINOJSON_USE_DOUBLE, \
-                            ARDUINOJSON_ENABLE_STRING_DEDUPLICATION),          \
-      ARDUINOJSON_HEX_DIGIT(                                                   \
-          ARDUINOJSON_ENABLE_NAN, ARDUINOJSON_ENABLE_INFINITY,                 \
-          ARDUINOJSON_ENABLE_COMMENTS, ARDUINOJSON_DECODE_UNICODE))
-#endif
+#define ARDUINOJSON_EXPAND18(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r) a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r
 #if ARDUINOJSON_DEBUG
 #include <assert.h>
 #define ARDUINOJSON_ASSERT(X) assert(X)
@@ -237,7 +192,7 @@
 #define ARDUINOJSON_ASSERT(X) ((void)0)
 #endif
 #include <stddef.h>
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 class MemoryPool;
 class VariantData;
 class VariantSlot;
@@ -344,9 +299,9 @@ template <size_t X, size_t Y>
 struct Max<X, Y, false> {
   static const size_t value = Y;
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #include <stdint.h>
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <int Bits>
 struct int_t;
 template <>
@@ -416,7 +371,7 @@ template <typename T>
 struct is_const : false_type {};
 template <typename T>
 struct is_const<const T> : true_type {};
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4244)
@@ -424,7 +379,7 @@ struct is_const<const T> : true_type {};
 #ifdef __ICCARM__
 #pragma diag_suppress=Pa093
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <typename From, typename To>
 struct is_convertible {
  protected:  // <- to avoid GCC's "all member functions in class are private"
@@ -435,14 +390,14 @@ struct is_convertible {
  public:
   static const bool value = sizeof(probe(declval<From>())) == sizeof(Yes);
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 #ifdef __ICCARM__
 #pragma diag_default=Pa093
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <typename>
 struct is_floating_point : false_type {};
 template <>
@@ -578,12 +533,12 @@ template <typename T>
 struct remove_reference<T&> {
   typedef T type;
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4310)
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <typename T, typename Enable = void>
 struct numeric_limits;
 template <typename T>
@@ -605,11 +560,11 @@ struct numeric_limits<
     return T(~lowest());
   }
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 namespace storage_policies {
 struct store_by_address {};
 struct store_by_copy {};
@@ -627,17 +582,17 @@ typedef uint64_t UInt;
 typedef long Integer;
 typedef unsigned long UInt;
 #endif
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #if ARDUINOJSON_HAS_LONG_LONG && !ARDUINOJSON_USE_LONG_LONG
 #define ARDUINOJSON_ASSERT_INTEGER_TYPE_IS_SUPPORTED(T)                  \
-  static_assert(sizeof(T) <= sizeof(ARDUINOJSON_NAMESPACE::Integer),     \
+  static_assert(sizeof(T) <= sizeof(JSON::Integer),     \
                 "To use 64-bit integers with ArduinoJson, you must set " \
                 "ARDUINOJSON_USE_LONG_LONG to 1. See "                   \
                 "https://arduinojson.org/v6/api/config/use_long_long/");
 #else
 #define ARDUINOJSON_ASSERT_INTEGER_TYPE_IS_SUPPORTED(T)
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 enum {
   VALUE_MASK = 0x7F,
   VALUE_IS_OWNED = 0x01,
@@ -745,10 +700,10 @@ class VariantSlot {
       _content.asCollection.movePointers(stringDistance, variantDistance);
   }
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #include <string.h>
 #define JSON_STRING_SIZE(SIZE) (SIZE + 1)
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 class MemoryPool {
  public:
   MemoryPool(char* buf, size_t capa)
@@ -952,7 +907,7 @@ class RamStringAdapter : public ConstRamStringAdapter {
   void copyTo(char* p, size_t n) const {
     memcpy(p, _str, n);
   }
-  typedef ARDUINOJSON_NAMESPACE::storage_policies::store_by_copy storage_policy;
+  typedef JSON::storage_policies::store_by_copy storage_policy;
 };
 template <typename TChar>
 inline RamStringAdapter adaptString(const TChar* str) {
@@ -999,10 +954,10 @@ template <typename TChar>
 inline SizedRamStringAdapter adaptString(const TChar* str, size_t size) {
   return SizedRamStringAdapter(reinterpret_cast<const char*>(str), size);
 }
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #if ARDUINOJSON_ENABLE_STD_STRING
 #include <string>
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <typename TString>
 class StdStringAdapter {
  public:
@@ -1042,10 +997,10 @@ adaptString(const std::basic_string<char, TCharTraits, TAllocator>& str) {
   return StdStringAdapter<std::basic_string<char, TCharTraits, TAllocator> >(
       str);
 }
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #endif
 #if ARDUINOJSON_ENABLE_ARDUINO_STRING
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 class ArduinoStringAdapter {
  public:
   ArduinoStringAdapter(const ::String& str) : _str(&str) {}
@@ -1079,17 +1034,17 @@ struct IsString< ::StringSumHelper> : true_type {};
 inline ArduinoStringAdapter adaptString(const ::String& str) {
   return ArduinoStringAdapter(str);
 }
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #endif
 #if ARDUINOJSON_ENABLE_PROGMEM
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 struct pgm_p {
   pgm_p(const char* p) : address(p) {}
   const char* address;
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #ifndef strlen_P
-inline size_t strlen_P(ARDUINOJSON_NAMESPACE::pgm_p s) {
+inline size_t strlen_P(JSON::pgm_p s) {
   const char* p = s.address;
   ARDUINOJSON_ASSERT(p != NULL);
   while (pgm_read_byte(p)) p++;
@@ -1097,7 +1052,7 @@ inline size_t strlen_P(ARDUINOJSON_NAMESPACE::pgm_p s) {
 }
 #endif
 #ifndef strncmp_P
-inline int strncmp_P(const char* a, ARDUINOJSON_NAMESPACE::pgm_p b, size_t n) {
+inline int strncmp_P(const char* a, JSON::pgm_p b, size_t n) {
   const char* s1 = a;
   const char* s2 = b.address;
   ARDUINOJSON_ASSERT(s1 != NULL);
@@ -1116,7 +1071,7 @@ inline int strncmp_P(const char* a, ARDUINOJSON_NAMESPACE::pgm_p b, size_t n) {
 }
 #endif
 #ifndef strcmp_P
-inline int strcmp_P(const char* a, ARDUINOJSON_NAMESPACE::pgm_p b) {
+inline int strcmp_P(const char* a, JSON::pgm_p b) {
   const char* s1 = a;
   const char* s2 = b.address;
   ARDUINOJSON_ASSERT(s1 != NULL);
@@ -1134,7 +1089,7 @@ inline int strcmp_P(const char* a, ARDUINOJSON_NAMESPACE::pgm_p b) {
 }
 #endif
 #ifndef memcpy_P
-inline void* memcpy_P(void* dst, ARDUINOJSON_NAMESPACE::pgm_p src, size_t n) {
+inline void* memcpy_P(void* dst, JSON::pgm_p src, size_t n) {
   uint8_t* d = reinterpret_cast<uint8_t*>(dst);
   const char* s = src.address;
   ARDUINOJSON_ASSERT(d != NULL);
@@ -1145,7 +1100,7 @@ inline void* memcpy_P(void* dst, ARDUINOJSON_NAMESPACE::pgm_p src, size_t n) {
   return dst;
 }
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 class FlashStringIterator {
  public:
   explicit FlashStringIterator(const __FlashStringHelper* ptr)
@@ -1247,9 +1202,9 @@ inline SizedFlashStringAdapter adaptString(const __FlashStringHelper* str,
                                            size_t sz) {
   return SizedFlashStringAdapter(str, sz);
 }
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <typename T>
 class SerializedValue {
  public:
@@ -1295,7 +1250,7 @@ template <typename TChar>
 inline SerializedValue<TChar*> serialized(TChar* p, size_t n) {
   return SerializedValue<TChar*>(p, n);
 }
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wconversion"
@@ -1306,7 +1261,7 @@ inline SerializedValue<TChar*> serialized(TChar* p, size_t n) {
 #pragma GCC diagnostic ignored "-Wconversion"
 #endif
 #include <stdlib.h>
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 #ifndef isnan
 template <typename T>
 bool isnan(T x) {
@@ -1332,9 +1287,9 @@ T alias_cast(F raw_data) {
   ac.raw = raw_data;
   return ac.data;
 }
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #if ARDUINOJSON_ENABLE_PROGMEM
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <typename T>
 typename enable_if<is_pointer<T>::value, T>::type pgm_read(const void* p) {
   return reinterpret_cast<T>(pgm_read_ptr(p));
@@ -1351,7 +1306,7 @@ typename enable_if<is_same<T, uint32_t>::value, T>::type pgm_read(
     const void* p) {
   return pgm_read_dword(p);
 }
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #ifndef ARDUINOJSON_DEFINE_STATIC_ARRAY
 #define ARDUINOJSON_DEFINE_STATIC_ARRAY(type, name, value) \
   static type const name[] PROGMEM = value;
@@ -1369,7 +1324,7 @@ typename enable_if<is_same<T, uint32_t>::value, T>::type pgm_read(
 #define ARDUINOJSON_READ_STATIC_ARRAY(type, name, index) name[index]
 #endif
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <typename T, size_t = sizeof(T)>
 struct FloatTraits {};
 template <typename T>
@@ -1591,7 +1546,7 @@ typename enable_if<!is_floating_point<TOut>::value, TOut>::type convertFloat(
              ? TOut(value)
              : 0;
 }
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #elif defined(__GNUC__)
@@ -1606,7 +1561,7 @@ typename enable_if<!is_floating_point<TOut>::value, TOut>::type convertFloat(
 #pragma GCC diagnostic ignored "-Wuninitialized"
 #endif
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 class VariantData {
   VariantContent _content;  // must be first to allow cast from array to variant
   uint8_t _flags;
@@ -1897,13 +1852,13 @@ class VariantData {
     _flags |= t;
   }
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #if defined(__GNUC__)
 #if __GNUC__ >= 8
 #pragma GCC diagnostic pop
 #endif
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <typename TAdaptedString>
 inline bool slotSetKey(VariantSlot* var, TAdaptedString key, MemoryPool* pool) {
   if (!var)
@@ -1957,12 +1912,12 @@ template <typename T>
 struct IsVisitable : is_base_of<Visitable, T> {};
 template <typename T>
 struct IsVisitable<T&> : IsVisitable<T> {};
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #if ARDUINOJSON_ENABLE_ARDUINO_STRING
 #endif
 #if ARDUINOJSON_ENABLE_STD_STRING
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <typename>
 struct IsWriteableString : false_type {};
 #if ARDUINOJSON_ENABLE_ARDUINO_STRING
@@ -2049,7 +2004,7 @@ variantAs(const VariantData* data);
 template <typename T>
 inline typename enable_if<IsWriteableString<T>::value, T>::type variantAs(
     const VariantData* data);
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #ifdef _MSC_VER  // Visual Studio
 #define FORCE_INLINE  // __forceinline causes C4714 when returning std::string
 #define NO_INLINE __declspec(noinline)
@@ -2081,7 +2036,7 @@ inline typename enable_if<IsWriteableString<T>::value, T>::type variantAs(
 #else
 #define ARDUINOJSON_NO_SANITIZE(check)
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <typename TVisitor>
 inline typename TVisitor::result_type variantAccept(const VariantData *var,
                                                     TVisitor &visitor) {
@@ -2680,7 +2635,7 @@ class VariantRef : public VariantRefBase<VariantData>,
   }
  private:
   MemoryPool *_pool;
-};  // namespace ARDUINOJSON_NAMESPACE
+};  // namespace JSON
 class VariantConstRef : public VariantRefBase<const VariantData>,
                         public VariantOperators<VariantConstRef>,
                         public VariantShortcuts<VariantConstRef>,
@@ -2816,10 +2771,10 @@ class ArrayConstRefIterator {
  private:
   const VariantSlot *_slot;
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #define JSON_ARRAY_SIZE(NUMBER_OF_ELEMENTS) \
-  ((NUMBER_OF_ELEMENTS) * sizeof(ARDUINOJSON_NAMESPACE::VariantSlot))
-namespace ARDUINOJSON_NAMESPACE {
+  ((NUMBER_OF_ELEMENTS) * sizeof(JSON::VariantSlot))
+namespace JSON {
 class ObjectRef;
 template <typename>
 class ElementProxy;
@@ -3142,10 +3097,10 @@ class ObjectConstIterator {
  private:
   const VariantSlot *_slot;
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #define JSON_OBJECT_SIZE(NUMBER_OF_ELEMENTS) \
-  ((NUMBER_OF_ELEMENTS) * sizeof(ARDUINOJSON_NAMESPACE::VariantSlot))
-namespace ARDUINOJSON_NAMESPACE {
+  ((NUMBER_OF_ELEMENTS) * sizeof(JSON::VariantSlot))
+namespace JSON {
 template <typename TData>
 class ObjectRefBase {
  public:
@@ -3317,12 +3272,12 @@ template <>
 struct VariantTo<VariantRef> {
   typedef VariantRef type;
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4522)
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <typename TArray>
 class ElementProxy : public VariantOperators<ElementProxy<TArray> >,
                      public VariantShortcuts<ElementProxy<TArray> >,
@@ -3434,7 +3389,7 @@ class ElementProxy : public VariantOperators<ElementProxy<TArray> >,
   TArray _array;
   const size_t _index;
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -3442,7 +3397,7 @@ class ElementProxy : public VariantOperators<ElementProxy<TArray> >,
 #pragma warning(push)
 #pragma warning(disable : 4522)
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <typename TObject, typename TStringRef>
 class MemberProxy : public VariantOperators<MemberProxy<TObject, TStringRef> >,
                     public VariantShortcuts<MemberProxy<TObject, TStringRef> >,
@@ -3558,11 +3513,11 @@ class MemberProxy : public VariantOperators<MemberProxy<TObject, TStringRef> >,
   TObject _object;
   TStringRef _key;
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 class JsonDocument : public Visitable {
  public:
   template <typename TVisitor>
@@ -4781,11 +4736,11 @@ inline VariantConstRef operator|(VariantConstRef preferedValue,
                                  VariantConstRef defaultValue) {
   return preferedValue ? preferedValue : defaultValue;
 }
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #if ARDUINOJSON_ENABLE_STD_STREAM
 #include <ostream>
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 class DeserializationError {
   typedef void (DeserializationError::*bool_type)() const;
   void safeBoolHelper() const {}
@@ -5030,9 +4985,9 @@ struct Reader<VariantConstRef, void> : Reader<char*, void> {
   explicit Reader(VariantConstRef x)
       : Reader<char*, void>(x.as<const char*>()) {}
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #if ARDUINOJSON_ENABLE_ARDUINO_STREAM
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <typename TSource>
 struct Reader<TSource,
               typename enable_if<is_base_of<Stream, TSource>::value>::type> {
@@ -5048,10 +5003,10 @@ struct Reader<TSource,
  private:
   Stream* _stream;
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #endif
 #if ARDUINOJSON_ENABLE_ARDUINO_STRING
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <typename TSource>
 struct Reader<TSource,
               typename enable_if<is_base_of< ::String, TSource>::value>::type>
@@ -5059,10 +5014,10 @@ struct Reader<TSource,
   explicit Reader(const ::String& s)
       : BoundedReader<const char*>(s.c_str(), s.length()) {}
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #endif
 #if ARDUINOJSON_ENABLE_PROGMEM
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <>
 struct Reader<const __FlashStringHelper*, void> {
   const char* _ptr;
@@ -5100,11 +5055,11 @@ struct BoundedReader<const __FlashStringHelper*, void> {
     return length;
   }
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #endif
 #if ARDUINOJSON_ENABLE_STD_STREAM
 #include <istream>
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <typename TSource>
 struct Reader<TSource, typename enable_if<
                            is_base_of<std::istream, TSource>::value>::type> {
@@ -5120,9 +5075,9 @@ struct Reader<TSource, typename enable_if<
  private:
   std::istream* _stream;
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 class StringCopier {
  public:
   StringCopier(MemoryPool& pool) : _pool(&pool) {}
@@ -5300,14 +5255,14 @@ class Latch {
   bool _ended;
 #endif
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #if defined(__GNUC__)
 #if __GNUC__ >= 7
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 namespace Utf16 {
 inline bool isHighSurrogate(uint16_t codeunit) {
   return codeunit >= 0xD800 && codeunit < 0xDC00;
@@ -5339,13 +5294,13 @@ class Codepoint {
   uint32_t _codepoint;
 };
 }  // namespace Utf16
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #if defined(__GNUC__)
 #if __GNUC__ >= 8
 #pragma GCC diagnostic pop
 #endif
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 namespace Utf8 {
 template <typename TStringBuilder>
 inline void encodeCodepoint(uint32_t codepoint32, TStringBuilder& str) {
@@ -6161,9 +6116,9 @@ class StaticStringWriter {
   char *end;
   char *p;
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #if ARDUINOJSON_ENABLE_STD_STRING
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <class T>
 struct is_std_string : false_type {};
 template <class TCharTraits, class TAllocator>
@@ -6185,10 +6140,10 @@ class Writer<TDestination,
  private:
   TDestination *_str;
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #endif
 #if ARDUINOJSON_ENABLE_ARDUINO_STRING
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <>
 class Writer< ::String, void> {
   static const size_t bufferCapacity = ARDUINOJSON_STRING_BUFFER_SIZE;
@@ -6223,10 +6178,10 @@ class Writer< ::String, void> {
   char _buffer[bufferCapacity];
   size_t _size;
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #endif
 #if ARDUINOJSON_ENABLE_STD_STREAM
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <typename TDestination>
 class Writer<
     TDestination,
@@ -6245,10 +6200,10 @@ class Writer<
  private:
   std::ostream* _os;
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #endif
 #if ARDUINOJSON_ENABLE_ARDUINO_PRINT
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <typename TDestination>
 class Writer<
     TDestination,
@@ -6264,9 +6219,9 @@ class Writer<
  private:
   ::Print* _print;
 };
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #endif
-namespace ARDUINOJSON_NAMESPACE {
+namespace JSON {
 template <template <typename> class TSerializer, typename TSource,
           typename TWriter>
 size_t doSerialize(const TSource &source, TWriter writer) {
@@ -7165,7 +7120,7 @@ template <typename TSource>
 inline size_t measureMsgPack(const TSource& source) {
   return measure<MsgPackSerializer>(source);
 }
-}  // namespace ARDUINOJSON_NAMESPACE
+}  // namespace JSON
 #ifdef __GNUC__
 #define ARDUINOJSON_PRAGMA(x) _Pragma(#x)
 #define ARDUINOJSON_COMPILE_ERROR(msg) ARDUINOJSON_PRAGMA(GCC error msg)
@@ -7177,42 +7132,29 @@ inline size_t measureMsgPack(const TSource& source) {
 #define JsonBuffer ARDUINOJSON_DEPRECATION_ERROR(JsonBuffer, class)
 #define RawJson ARDUINOJSON_DEPRECATION_ERROR(RawJson, function)
 #endif
-namespace ArduinoJson {
-typedef ARDUINOJSON_NAMESPACE::ArrayConstRef JsonArrayConst;
-typedef ARDUINOJSON_NAMESPACE::ArrayRef JsonArray;
-typedef ARDUINOJSON_NAMESPACE::Float JsonFloat;
-typedef ARDUINOJSON_NAMESPACE::Integer JsonInteger;
-typedef ARDUINOJSON_NAMESPACE::ObjectConstRef JsonObjectConst;
-typedef ARDUINOJSON_NAMESPACE::ObjectRef JsonObject;
-typedef ARDUINOJSON_NAMESPACE::Pair JsonPair;
-typedef ARDUINOJSON_NAMESPACE::PairConst JsonPairConst;
-typedef ARDUINOJSON_NAMESPACE::String JsonString;
-typedef ARDUINOJSON_NAMESPACE::UInt JsonUInt;
-typedef ARDUINOJSON_NAMESPACE::VariantConstRef JsonVariantConst;
-typedef ARDUINOJSON_NAMESPACE::VariantRef JsonVariant;
-using ARDUINOJSON_NAMESPACE::BasicJsonDocument;
-using ARDUINOJSON_NAMESPACE::copyArray;
-using ARDUINOJSON_NAMESPACE::DeserializationError;
-using ARDUINOJSON_NAMESPACE::deserializeJson;
-using ARDUINOJSON_NAMESPACE::deserializeMsgPack;
-using ARDUINOJSON_NAMESPACE::DynamicJsonDocument;
-using ARDUINOJSON_NAMESPACE::JsonDocument;
-using ARDUINOJSON_NAMESPACE::measureJson;
-using ARDUINOJSON_NAMESPACE::serialized;
-using ARDUINOJSON_NAMESPACE::serializeJson;
-using ARDUINOJSON_NAMESPACE::serializeJsonPretty;
-using ARDUINOJSON_NAMESPACE::serializeMsgPack;
-using ARDUINOJSON_NAMESPACE::StaticJsonDocument;
-namespace DeserializationOption {
-using ARDUINOJSON_NAMESPACE::Filter;
-using ARDUINOJSON_NAMESPACE::NestingLimit;
-}  // namespace DeserializationOption
-}  // namespace ArduinoJson
-
-using namespace ArduinoJson;
-
-#else
-
-#error ArduinoJson requires a C++ compiler, please change file extension to .cc or .cpp
-
+typedef JSON::ArrayConstRef JsonArrayConst;
+typedef JSON::ArrayRef JsonArray;
+typedef JSON::Float JsonFloat;
+typedef JSON::Integer JsonInteger;
+typedef JSON::ObjectConstRef JsonObjectConst;
+typedef JSON::ObjectRef JsonObject;
+typedef JSON::Pair JsonPair;
+typedef JSON::PairConst JsonPairConst;
+typedef JSON::String JsonString;
+typedef JSON::UInt JsonUInt;
+typedef JSON::VariantConstRef JsonVariantConst;
+typedef JSON::VariantRef JsonVariant;
+using JSON::BasicJsonDocument;
+using JSON::copyArray;
+using JSON::DeserializationError;
+using JSON::deserializeJson;
+using JSON::deserializeMsgPack;
+using JSON::DynamicJsonDocument;
+using JSON::JsonDocument;
+using JSON::measureJson;
+using JSON::serialized;
+using JSON::serializeJson;
+using JSON::serializeJsonPretty;
+using JSON::serializeMsgPack;
+using JSON::StaticJsonDocument;
 #endif

@@ -9,5 +9,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BDS.hpp" />
+    <ClInclude Include="pch.h" />
   </ItemGroup>
 </Project>

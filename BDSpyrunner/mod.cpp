@@ -140,6 +140,15 @@ static PyObject* api_setListener(PyObject* self, PyObject* args) {
 	}
 	return Py_False;
 }
+// 设置指令说明
+static PyObject* api_setCommandDescription(PyObject* self, PyObject* args) {
+	const char* cmd, * des;
+	if (PyArg_ParseTuple(args, "ss:setCommandDescribe", &cmd, &des)) {
+		Command[cmd] = des;
+		return Py_True;
+	}
+	return Py_False;
+}
 // 发送表单
 static PyObject* api_sendCustomForm(PyObject* self, PyObject* args) {
 	const char* str;
@@ -269,15 +278,6 @@ static PyObject* api_setName(PyObject* self, PyObject* args) {
 	}
 	return Py_False;
 }
-// 设置指令说明
-static PyObject* api_setCommandDescription(PyObject* self, PyObject* args) {
-	const char* cmd, * des;
-	if (PyArg_ParseTuple(args, "ss:setCommandDescribe", &cmd, &des)) {
-		Command[cmd] = des;
-		return Py_True;
-	}
-	return Py_False;
-}
 // 玩家分数
 static PyObject* api_getPlayerScore(PyObject* self, PyObject* args) {
 	const char* obj;
@@ -379,6 +379,7 @@ PyMethodDef m[] = {
    {"runcmd", api_runcmd, 1,0},
    {"setTimeout", api_setTimeout, 1,0},
    {"setListener", api_setListener, 1,0},
+   {"setCommandDescription", api_setCommandDescription, 1,0},
    {"sendSimpleForm", api_sendSimpleForm, 1,0},
    {"sendModalForm", api_sendModalForm, 1,0},
    {"sendCustomForm", api_sendCustomForm, 1,0},
@@ -390,9 +391,8 @@ PyMethodDef m[] = {
    {"setPlayerPerm",api_setPlayerPerm, 1,0},
    {"addLevel", api_addLevel, 1,0},
    {"setName", api_setName, 1,0},
-   {"setCommandDescription", api_setCommandDescription, 1,0},
-   {"modifyPlayerScore", api_modifyPlayerScore, 1,0},
    {"getPlayerScore", api_getPlayerScore, 1,0},
+   {"modifyPlayerScore", api_modifyPlayerScore, 1,0},
    {"talkAs", api_talkAs, 1,0},
    {"runcmdAs", api_runcmdAs, 1,0},
    {"teleport", api_teleport, 1,0},

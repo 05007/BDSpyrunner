@@ -1,5 +1,4 @@
 #include "pch.h"
-#include "BDS.hpp"
 #pragma warning(disable:4996)
 #pragma region 宏定义
 //调用所有函数
@@ -12,6 +11,7 @@ for (PyObject* fn :PyFuncs[type]) {					\
 //THook返回判断
 #define RET(...) if (!res) return 0;return original(__VA_ARGS__)
 #define cpkt(pkt,p)	SYMCALL<VA>("?createPacket@MinecraftPackets@@SA?AV?$shared_ptr@VPacket@@@std@@W4MinecraftPacketIds@@@Z",&pkt, p);
+#define PlayerCheck(ptr)  PlayerList[(Player*)ptr]
 #pragma endregion
 #pragma region 全局变量
 static VA _cmdqueue, _level, _ServerNetworkHandle;
@@ -25,9 +25,6 @@ static Player* _p;//临时
 #pragma endregion
 #pragma region 函数定义
 void init();
-static inline bool PlayerCheck(void* p) {
-	return PlayerList[(Player*)p];
-}
 static void setTimeout(int time, PyObject* func) {
 	Sleep(time);
 	if (PyCallable_Check(func))
@@ -214,17 +211,19 @@ static PyObject* api_getPlayerInfo(PyObject* self, PyObject* args) {
 	return PyDict_New();
 }
 static PyObject* api_getActorInfo(PyObject* self, PyObject* args) {
-	Actor* a;
+	Actor* a = nullptr;
 	if (PyArg_ParseTuple(args, "K:getActorInfo", &a)) {
-		Vec3* pp = a->getPos();
-		return Py_BuildValue("{s:s,s:[f,f,f],s:i,s:i,s:f,s:f}",
-			"actorname", a->getNameTag().c_str(),
-			"XYZ", pp->x, pp->y, pp->z,
-			"dimensionid", a->getDimensionId(),
-			"isstand", a->isStand(),
-			"health", a->getHealth().first,
-			"maxhealth", a->getHealth().second
-		);
+		if (a) {
+			Vec3* pp = a->getPos();
+			return Py_BuildValue("{s:s,s:[f,f,f],s:i,s:i,s:f,s:f}",
+				"actorname", a->getNameTag().c_str(),
+				"XYZ", pp->x, pp->y, pp->z,
+				"dimensionid", a->getDimensionId(),
+				"isstand", a->isStand(),
+				"health", a->getHealth().first,
+				"maxhealth", a->getHealth().second
+			);
+		}
 	}
 	return PyDict_New();
 }
@@ -271,7 +270,7 @@ static PyObject* api_setName(PyObject* self, PyObject* args) {
 	return Py_False;
 }
 // 设置指令说明
-static PyObject* api_setCommandDescribe(PyObject* self, PyObject* args) {
+static PyObject* api_setCommandDescription(PyObject* self, PyObject* args) {
 	const char* cmd, * des;
 	if (PyArg_ParseTuple(args, "ss:setCommandDescribe", &cmd, &des)) {
 		Command[cmd] = des;
@@ -391,7 +390,7 @@ PyMethodDef m[] = {
    {"setPlayerPerm",api_setPlayerPerm, 1,0},
    {"addLevel", api_addLevel, 1,0},
    {"setName", api_setName, 1,0},
-   {"setCommandDescribe", api_setCommandDescribe, 1,0},
+   {"setCommandDescription", api_setCommandDescription, 1,0},
    {"modifyPlayerScore", api_modifyPlayerScore, 1,0},
    {"getPlayerScore", api_getPlayerScore, 1,0},
    {"talkAs", api_talkAs, 1,0},
@@ -559,8 +558,8 @@ THook(关闭木桶, void, "?stopOpen@BarrelBlockActor@@UEAAXAEAVPlayer@@@Z",
 }
 THook(玩家放入取出, void, "?containerContentChanged@LevelContainerModel@@UEAAXH@Z",
 	VA a1, VA slot) {
-	VA v3 = f(VA, a1 + 208);// IDA LevelContainerModel::_getContainer line 22
-	BlockSource* bs = f(BlockSource*, f(VA, v3 + 848) + 80);
+	VA v3 = f(VA, a1 + 208);// IDA LevelContainerModel::_getContainer line 15 25
+	BlockSource* bs = f(BlockSource*, f(VA, v3 + 848) + 88);
 	BlockPos* bp = (BlockPos*)(a1 + 216);
 	BlockLegacy* bl = bs->getBlock(bp)->getBlockLegacy();
 	short bid = bl->getBlockItemID();
@@ -750,11 +749,12 @@ THook(命令方块执行, bool, "?performCommand@CommandBlockActor@@QEAA_NAEAVBlockSou
 }
 #pragma endregion
 void init() {
-	puts("BDSPyrunner v0.0.7 Loading...");
+	puts("BDSpyrunner v0.0.8 Loading...");
 	PyPreConfig cfg;
-	PyPreConfig_InitIsolatedConfig(&cfg);
+	PyPreConfig_InitPythonConfig(&cfg);
 	Py_PreInitialize(&cfg);
-	PyImport_AppendInittab("mc", [] {return PyModule_Create(&mc); }); //增加一个模块
+	PyObject* (*initfunc)(void) = [] {return PyModule_Create2(&mc, 1013); };
+	PyImport_AppendInittab("mc", initfunc); //增加一个模块
 	Py_Initialize();
 	_finddata_t fileinfo;//用于查找的句柄
 	long long handle = _findfirst("./py/*.py", &fileinfo);

@@ -1,14 +1,14 @@
 #pragma once
-#include "pch.h"
+#include "bdxcore.h"
 #define f(type,ptr) (*(type*)(ptr))
 using namespace std;
 #pragma region Block
 struct BlockLegacy {
 	string getBlockName() {
-		return f(string, this + 120);
+		return f(string, this + 128);
 	}
 	short getBlockItemID() {	// IDA VanillaItems::initCreativeItemsCallback Item::beginCreativeGroup "itemGroup.name.planks"2533 line
-		short v3 = f(short, this + 312);
+		short v3 = f(short, this + 328);
 		if (v3 < 0x100) {
 			return v3;
 		}

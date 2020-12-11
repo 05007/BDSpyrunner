@@ -10,5 +10,9 @@
   <ItemGroup>
     <ClInclude Include="BDS.hpp" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="bdxcore.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\index.html" />
   </ItemGroup>
 </Project>

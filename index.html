@@ -9,17 +9,14 @@
 		}
 
 		.comment {
-			font-family: "新宋体";
-			color: #57A64A;
+			color: #008000;
 		}
 
 		.string {
-			font-family: "华文仿宋";
 			color: #D69D85;
 		}
 
 		.listen {
-			font-family: "黑体";
 			font-size: larger;
 			color: #FFB502;
 		}
@@ -47,217 +44,185 @@
 
 		<h2><a name="apititle">二、API接口定义</a></h2>
 
-		<p>(1)setTimeout</p>
+		<p>logout</p>
 		<span class="comment">
-			// 函数名：setTimeout<br/>
-			// 功能：延时执行一个函数<br/>
-			// 参数个数：2个<br/>
-			// 参数类型：字符串/函数，整型<br/>
-			// 参数详解：code - 待延时执行的指令字符串/函数对象，millisec - 延时毫秒数<br/>
-		</span>
-		[例] setTimeout(func, 1000)
-
-		<p>(2)setListener</p>
-		<span class="comment">
-			// 函数名：setBeforeActListener<br/>
-			// 功能：注册玩家事件加载前监听器<br/>
-			// 参数个数：2个<br/>
-			// 参数类型：字符串，函数对象<br/>
-			// 参数详解：key - 注册用关键字，func - 供事件触发时的回调函数对象
-		</span><br/>
-		[例] setBeforeActListener(<span class="string">'聊天消息'</span>,func)
-
-		<p>(3)setCommandDescribe</p>
-		<span class="comment">
-			// 函数名：setCommandDescribe<br/>
-			// 功能：设置一个全局指令说明<br/>
-			// 参数个数：2个<br/>
-			// 参数类型：字符串，字符串<br/>
-			// 参数详解：cmd - 命令，description - 命令说明<br/>
-			// 备注：延期注册的情况，可能不会改变客户端界面
-		</span><br/>
-		[例] setCommandDescribe(<span class="string">'testcase'</span>,<span class="string">'这是一个测试用例指令说明'</span>)
-
-		<p>(4)runcmd</p>
-		<span class="comment">
-			// 函数名：runcmd<br/>
-			// 功能：执行后台指令<br/>
-			// 参数个数：1个<br/>
-			// 参数类型：字符串<br/>
-			// 参数详解：cmd - 语法正确的MC指令<br/>
-			// 返回值：是否正常执行
-		</span><br/>
-		[例] runcmd(<span class="string">'say python!'</span>)
-
-		<p>(5)logout</p>
-		<span class="comment">
-			// 函数名：logout<br/>
-			// 功能：发送一条命令输出消息(可被拦截)<br/>
-			// 参数个数：1个<br/>
-			// 参数类型：字符串<br/>
-			// 参数详解：cmdout - 待发送的命令输出字符串
+			功能：发送一条命令输出消息(可被拦截)<br/>
+			参数类型：字符串<br/>
+			参数详解：cmdout - 待发送的命令输出字符串
 		</span><br/>
 		[例] logout(<span class="string">'执行结果=正确'</span>)
 
-		<p>(6)setNameTag</p>
+		<p>runcmd</p>
 		<span class="comment">
-			// 函数名：reNameByUuid<br/>
-			// 功能：重命名一个指定的玩家名<br/>
-			// 参数个数：2个<br/>
-			// 参数类型：字符串，字符串<br/>
-			// 参数详解：player - 玩家指针，newName - 新的名称<br/>
-			// 返回值：是否命名成功<br/>
-			// (备注：该函数可能不会变更客户端实际显示名)
+			功能：执行后台指令<br/>
+			参数类型：字符串<br/>
+			参数详解：cmd - 语法正确的MC指令<br/>
+			返回值：是否正常执行
+		</span><br/>
+		[例] runcmd(<span class="string">'say python!'</span>)
+
+		<p>setTimeout</p>
+		<span class="comment">
+			功能：延时执行一个函数<br/>
+			参数类型：函数，整型<br/>
+			参数详解：func - 待延时执行的无参函数，millisec - 延时毫秒数<br/>
+		</span>
+		[例] setTimeout(func, 1000)
+
+		<p>setListener</p>
+		<span class="comment">
+			功能：注册玩家事件加载前监听器<br/>
+			参数类型：字符串，函数<br/>
+			参数详解：key - 注册用关键字，func - 供事件触发时的回调函数对象
+		</span><br/>
+		[例] setBeforeActListener(<span class="string">'聊天消息'</span>,func)
+
+		<p>setCommandDescription</p>
+		<span class="comment">
+			功能：设置一个全局指令说明<br/>
+			参数类型：字符串，字符串<br/>
+			参数详解：cmd - 命令，description - 命令说明<br/>
+			备注：一定要在全局注册，否则不会改变客户端界面
+		</span><br/>
+		[例] setCommandDescription(<span class="string">'testcase'</span>,<span class="string">'这是一个测试用例指令说明'</span>)
+
+		<p>sendSimpleForm</p>
+		<span class="comment">
+			功能：向指定的玩家发送一个简单表单<br/>
+			参数类型：整数，字符串，字符串，字符串<br/>
+			参数详解：player - 玩家指针，title - 表单标题，content - 内容，buttons - 按钮文本数组字符串<br/>
+			返回值：创建的表单id，为 0 表示发送失败
+		</span><br/>
+		[例] sendSimpleForm(player, <span class="string">'致命选项'</span>, <span class="string">'请选择：'</span>, <span class="string">'[{"text":"生存"},{"text":"死亡"},{"text":"求助"}]'</span>)
+
+		<p>sendModalForm</p>
+		<span class="comment">
+			功能：向指定的玩家发送一个模式对话框<br/>
+			参数类型：整数，字符串，字符串，字符串，字符串<br/>
+			参数详解：player - 玩家指针，title - 表单标题，content - 内容，button1 按钮1标题（点击该按钮selected为true），button2
+			按钮2标题（点击该按钮selected为false）<br/>
+			返回值：创建的表单id，为 0 表示发送失败
+		</span><br/>
+		[例] sendModalForm(player, <span class="string">'没有第三个选项'</span>, <span class="string">'请选择：'</span>, <span class="string">'生存'</span>, <span class="string">'死亡'</span>)
+
+		<p>sendCustomForm</p>
+		<span class="comment">
+			功能：向指定的玩家发送一个自定义表单<br/>
+			参数类型：整数，字符串<br/>
+			参数详解：player - 玩家指针，json - 自定义表单的json字符串(要使用自定义表单类型，参考nk、pm格式或minebbs专栏)<br/>
+			返回值：创建的表单id，为 0 表示发送失败
+		</span><br/>
+		[例] sendForm(player,<span class="string">'{"content":[{"type":"label","text":"这是一个文本标签"},{"placeholder":"水印文本","default":"","type":"input","text":""},{"default":true,"type":"toggle","text":"开关~或许是吧"},{"min":0.0,"max":10.0,"step":2.0,"default":3.0,"type":"slider","text":"游标滑块！？"},{"default":1,"steps":["Step1","Step2","Step 3"],"type":"step_slider","text":"矩阵滑块？!"},{"default":1,"options":["Option 1","Option2","Option3"],"type":"dropdown","text":"如你所见，下拉框"}], "type":"custom_form","title":"这是一个自定义窗体"}'</span>)
+
+		<p>transferServer</p>
+		<span class="comment">
+			功能：传送玩家至指定服务器<br/>
+			参数类型：整数，字符串，整型<br/>
+			参数详解：player - 玩家指针，addr - 待传服务器，port - 端口<br/>
+			返回值：是否传送成功
+		</span><br/>
+		[例] transferServer(player,<span class="string">'www.xiafox.com'</span>, 19132)
+
+		<p>getSlectedItem</p>
+		<span class="comment">
+			功能：获取玩家手持信息<br/>
+			参数类型：整数<br/>
+			参数详解：player - 玩家指针<br/>
+			返回值：物品信息字典<br/>
+		</span><br/>
+		[例] getSlectedItem(player)
+
+		<p>setNameTag</p>
+		<span class="comment">
+			功能：重命名一个指定的玩家名<br/>
+			参数类型：字符串，字符串<br/>
+			参数详解：player - 玩家指针，newName - 新的名称<br/>
+			返回值：是否命名成功<br/>
+			(备注：该函数可能不会变更客户端实际显示名)
 		</span><br/>
 		[例] setNameTag(player,<span class="string">'名字'</span>)
 
-		<p>(7)addPlayerItem</p>
+		<p>addPlayerItem</p>
 		<span class="comment">
-			// 函数名：addPlayerItem<br/>
-			// 功能：增加玩家一个物品<br/>
-			// 参数个数：4个<br/>
-			// 参数类型：字符串<br/>
-			// 参数详解：player - 玩家指针，id - 物品id值，aux - 物品特殊值，count - 数量<br/>
-			// 返回值：是否增加成功<br/>
-			// (备注：特定条件下可能不会变更游戏内实际物品)
+			功能：增加玩家一个物品<br/>
+			参数类型：字符串<br/>
+			参数详解：player - 玩家指针，id - 物品id值，aux - 物品特殊值，count - 数量<br/>
+			返回值：是否增加成功<br/>
+			(备注：特定条件下可能不会变更游戏内实际物品)
 		</span><br/>
 		[例] addPlayerItem(player, 9, 0, 32)
 
-		<p>(8)setPlayerBossBar</p>
+		<p>setPlayerBossBar</p>
 		<span class="comment">
-			// 函数名：setPlayerBossBar<br/>
-			// 功能：设置玩家自定义血条<br/>
-			// 参数个数：3个<br/>
-			// 参数类型：字符串，字符串，浮点型<br/>
-			// 参数详解：player - 玩家指针，title - 血条标题，percent - 血条百分比<br/>
-			// 返回值：是否设置成功
+			功能：设置玩家自定义血条<br/>
+			参数类型：字符串，字符串，浮点型<br/>
+			参数详解：player - 玩家指针，title - 血条标题，percent - 血条百分比<br/>
+			返回值：是否设置成功
 		</span><br/>
 		[例] setPlayerBossBar(player,<span class="string">'标题'</span>, 1.00)
 
-		<p>(9)removePlayerBossBar</p>
+		<p>removePlayerBossBar</p>
 		<span class="comment">
-			// 函数名：removePlayerBossBar<br/>
-			// 功能：清除玩家自定义血条<br/>
-			// 参数个数：1个<br/>
-			// 参数类型：字符串<br/>
-			// 参数详解：player - 玩家指针<br/>
-			// 返回值：是否清除成功
+			功能：清除玩家自定义血条<br/>
+			参数类型：字符串<br/>
+			参数详解：player - 玩家指针<br/>
+			返回值：是否清除成功
 		</span><br/>
 		[例] removePlayerBossBar(player)
 
-		<p>(10)getPlayerInfo</p>
+		<p>getPlayerInfo</p>
 		<span class="comment">
-			// 函数名：getPlayerInfo<br/>
-			// 功能：查询在线玩家基本信息<br/>
-			// 参数个数：1个<br/>
-			// 参数类型：字符串<br/>
-			// 参数详解：player - 玩家指针<br/>
-			// 返回值：玩家基本信息字典
+			功能：查询在线玩家基本信息<br/>
+			参数类型：字符串<br/>
+			参数详解：player - 玩家指针<br/>
+			返回值：玩家基本信息字典
 		</span><br/>
 		[例] getPlayerInfo(player)<br/><br/>
 		注:此函数还有一个版本getActorInfo，用于获取生物数据，不进行玩家检查
 		
-		<p>(11)transferserver</p>
+		<p>teleport</p>
 		<span class="comment">
-			// 函数名：transferserver<br/>
-			// 功能：传送玩家至指定服务器<br/>
-			// 参数个数：3个<br/>
-			// 参数类型：字符串，字符串，整型<br/>
-			// 参数详解：player - 玩家指针，addr - 待传服务器，port - 端口<br/>
-			// 返回值：是否传送成功
-		</span><br/>
-		[例] transferserver(player,
-		<span class="string">'www.xiafox.com'</span>, 19132)
-
-		<p>(12)teleport</p>
-		<span class="comment">
-			// 函数名：teleport<br/>
-			// 功能：传送玩家至指定坐标和维度<br/>
-			// 参数个数：5个<br/>
-			// 参数类型：字符串，浮点型，浮点型，浮点型，整型<br/>
-			// 参数详解：player - 玩家指针，X - x，Y - y，Z - z，dimensionid - 维度ID<br/>
-			// 返回值：是否传送成功
+			功能：传送玩家至指定坐标和维度<br/>
+			参数类型：字符串，浮点型，浮点型，浮点型，整型<br/>
+			参数详解：player - 玩家指针，X - x，Y - y，Z - z，dimensionid - 维度ID<br/>
+			返回值：是否传送成功
 		</span><br/>
 		[例] teleport(player, 10, 99, 10, 2)
 
-		<p>(13)talkAs</p>
+		<p>talkAs</p>
 		<span class="comment">
-			// 函数名：talkAs<br/>
-			// 功能：模拟玩家发送一个文本<br/>
-			// 参数个数：2个<br/>
-			// 参数类型：字符串，字符串<br/>
-			// 参数详解：player - 玩家指针，msg - 待模拟发送的文本<br/>
-			// 返回值：是否发送成功
+			功能：模拟玩家发送一个文本<br/>
+			参数类型：字符串，字符串<br/>
+			参数详解：player - 玩家指针，msg - 待模拟发送的文本<br/>
+			返回值：是否发送成功
 		</span><br/>
 		[例] talkAs(player,<span class="string">'pyr!'</span>)
 
-		<p>(14)runcmdAs</p>
+		<p>runcmdAs</p>
 		<span class="comment">
-			// 函数名：runcmdAs<br/>
-			// 功能：模拟玩家执行一个指令<br/>
-			// 参数个数：2个<br/>
-			// 参数类型：字符串，字符串<br/>
-			// 参数详解：player - 玩家指针，cmd - 待模拟执行的指令<br/>
-			// 返回值：是否发送成功
+			功能：模拟玩家执行一个指令<br/>
+			参数类型：字符串，字符串<br/>
+			参数详解：player - 玩家指针，cmd - 待模拟执行的指令<br/>
+			返回值：是否发送成功
 		</span><br/>
 		[例] runcmdAs(player,<span class="string">'/me pyr!'</span>)
 
-		<p>(15)sendSimpleForm</p>
+		<p>setPlayerSidebar</p>
 		<span class="comment">
-			// 函数名：sendSimpleForm<br/>
-			// 功能：向指定的玩家发送一个简单表单<br/>
-			// 参数个数：4个<br/>
-			// 参数类型：字符串，字符串，字符串，字符串<br/>
-			// 参数详解：player - 玩家指针，title - 表单标题，content - 内容，buttons - 按钮文本数组字符串<br/>
-			// 返回值：创建的表单id，为 0 表示发送失败
-		</span><br/>
-		[例] sendSimpleForm(player, <span class="string">'致命选项'</span>, <span class="string">'请选择：'</span>, <span
-			class="string">'[{"text":"生存"},{"text":"死亡"},{"text":"求助"}]'</span>)
-
-		<p>(16)sendModalForm</p>
-		<span class="comment">
-			// 函数名：sendModalForm<br/>
-			// 功能：向指定的玩家发送一个模式对话框<br/>
-			// 参数个数：5个<br/>
-			// 参数类型：字符串，字符串，字符串，字符串，字符串<br/>
-			// 参数详解：player - 玩家指针，title - 表单标题，content - 内容，button1 按钮1标题（点击该按钮selected为true），button2
-			按钮2标题（点击该按钮selected为false）<br/>
-			// 返回值：创建的表单id，为 0 表示发送失败
-		</span><br/>
-		[例] sendModalForm(player, <span class="string">'没有第三个选项'</span>, <span class="string">'请选择：'</span>, <span class="string">'生存'</span>, <span class="string">'死亡'</span>)
-
-		<p>(17)sendCustomForm</p>
-		<span class="comment">
-			// 函数名：sendCustomForm<br/>
-			// 功能：向指定的玩家发送一个自定义表单<br/>
-			// 参数个数：2个<br/>
-			// 参数类型：字符串，字符串<br/>
-			// 参数详解：player - 玩家指针，json - 自定义表单的json字符串(要使用自定义表单类型，参考nk、pm格式或minebbs专栏)<br/>
-			// 返回值：创建的表单id，为 0 表示发送失败
-		</span><br/>
-		[例] sendForm(player,<span class="string">'{"content":[{"type":"label","text":"这是一个文本标签"},{"placeholder":"水印文本","default":"","type":"input","text":""},{"default":true,"type":"toggle","text":"开关~或许是吧"},{"min":0.0,"max":10.0,"step":2.0,"default":3.0,"type":"slider","text":"游标滑块！？"},{"default":1,"steps":["Step1","Step2","Step 3"],"type":"step_slider","text":"矩阵滑块？!"},{"default":1,"options":["Option 1","Option2","Option3"],"type":"dropdown","text":"如你所见，下拉框"}], "type":"custom_form","title":"这是一个自定义窗体"}'</span>)
-
-		<p>(18)setPlayerSidebar</p>
-		<span class="comment">
-			// 函数名：setPlayerSidebar<br/>
-			// 功能：设置玩家自定义侧边栏临时计分板<br/>
-			// 参数个数：3个<br/>
-			// 参数类型：字符串，字符串，字符串<br/>
-			// 参数详解：player - 玩家指针，title - 侧边栏标题，list - 列表字符串数组<br/>
-			// 返回值：是否设置成功<br/>
-			// (注：列表总是从第1行开始，总计不超过15行)<br/>
+			功能：设置玩家自定义侧边栏临时计分板<br/>
+			参数类型：字符串，字符串，字符串<br/>
+			参数详解：player - 玩家指针，title - 侧边栏标题，list - 列表字符串数组<br/>
+			返回值：是否设置成功<br/>
+			(注：列表总是从第1行开始，总计不超过15行)<br/>
 		</span>
-		[例] setPlayerSidebar(player,<span class="string">'自定义侧边栏'</span>, <span class="string">'["第一行", "第二行", "我在哪行?
-			"]'</span>)<br/>
+		[例] setPlayerSidebar(player,<span class="string">'自定义侧边栏'</span>, <span class="string">'["第一行", "第二行", "我在哪行?"]'</span>)<br/>
 
-		<p>(19)removePlayerSidebar</p>
+		<p>removePlayerSidebar</p>
 		<span class="comment">
-			// 函数名：removePlayerSidebar<br/>
-			// 功能：清除玩家自定义侧边栏<br/>
-			// 参数个数：1个<br/>
-			// 参数类型：字符串<br/>
-			// 参数详解：player - 玩家指针<br/>
-			// 返回值：是否清除成功<br/>
+			功能：清除玩家自定义侧边栏<br/>
+			参数类型：字符串<br/>
+			参数详解：player - 玩家指针<br/>
+			返回值：是否清除成功<br/>
 		</span>
 		[例] removePlayerSidebar(player)
 

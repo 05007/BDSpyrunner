@@ -1,8 +1,9 @@
 #include "pch.h"
 #pragma warning(disable:4996)
+#pragma "很不错"
 #pragma region 宏定义
 //调用所有函数
-#define CallAll(type,...)							\
+#define CALLPYFUNCTION(type,...)							\
 bool res = true;									\
 for (PyObject* fn :PyFuncs[type]) {					\
 	if(PyObject_CallFunction(fn,__VA_ARGS__)==Py_False)res = false;\
@@ -87,7 +88,7 @@ static bool BossEventPacket(Player* p, string name, float per, int eventtype) {
 	}
 	return false;
 }
-static bool setSidebar(Player* p, string title, string name) {
+static bool setDisplayObjectivePacket(Player* p, string title, string name) {
 	if (PlayerCheck(p)) {
 		VA pkt;//setDisplayObjectivePacket
 		cpkt(pkt, 107);
@@ -96,6 +97,22 @@ static bool setSidebar(Player* p, string title, string name) {
 		f(string, pkt + 104) = title;
 		f(string, pkt + 136) = "dummy";
 		f(char, pkt + 168) = 0;
+		p->sendPacket(pkt);
+	}
+	return true;
+}
+static bool SetScorePacket(Player* p, char type, string name) {
+	if (PlayerCheck(p)) {
+		VA pkt;//SetScorePacket
+		cpkt(pkt, 108);
+		f(char, pkt + 40) = type;//{set,remove}
+		ScorePacketInfo s;
+		s.sid = *(_scoreboard->getScoreboardId(&name));
+		s.score = 10;
+		s.fake_name = name;
+		s.type = 3;
+		s.obj_name = name;
+		f(vector<ScorePacketInfo>, pkt + 48) = { s };
 		p->sendPacket(pkt);
 	}
 	return true;
@@ -437,7 +454,7 @@ THook(计分板, Scoreboard*, "??0ServerScoreboard@@QEAA@VCommandSoftEnumRegistry@@
 THook(后台输出, VA, "??$_Insert_string@DU?$char_traits@D@std@@_K@std@@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@0@AEAV10@QEBD_K@Z",
 	VA handle, const char* str, VA size) {
 	if (handle == STD_COUT_HANDLE) {
-		CallAll(u8"后台输出", "s", str);
+		CALLPYFUNCTION(u8"后台输出", "s", str);
 		if (!res)return 0;
 	}
 	return original(handle, str, size);
@@ -450,24 +467,24 @@ THook(后台输入, bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D
 		init();
 		return false;
 	}
-	CallAll(u8"后台输入", "s", (*cmd).c_str());
+	CALLPYFUNCTION(u8"后台输入", "s", (*cmd).c_str());
 	RET(_this, cmd);
 }
 THook(玩家加入, VA, "?onPlayerJoined@ServerScoreboard@@UEAAXAEBVPlayer@@@Z",
 	VA a1, Player* p) {
 	PlayerList[p] = true;
-	CallAll(u8"加载名字", "K", p);
+	CALLPYFUNCTION(u8"加载名字", "K", p);
 	return original(a1, p);
 }
 THook(玩家离开游戏, void, "?_onPlayerLeft@ServerNetworkHandler@@AEAAXPEAVServerPlayer@@_N@Z",
 	VA _this, Player* p, char v3) {
 	PlayerList.erase(p);
-	CallAll(u8"离开游戏", "K", p);
+	CALLPYFUNCTION(u8"离开游戏", "K", p);
 	return original(_this, p, v3);
 }
 THook(玩家捡起物品, bool, "?take@Player@@QEAA_NAEAVActor@@HH@Z",
 	Player* p, Actor* a, VA a3, VA a4) {
-	CallAll(u8"捡起物品", "");
+	CALLPYFUNCTION(u8"捡起物品", "");
 	return original(p, a, a3, a4);
 }
 THook(玩家操作物品, bool, "?useItemOn@GameMode@@UEAA_NAEAVItemStack@@AEBVBlockPos@@EAEBVVec3@@PEBVBlock@@@Z",
@@ -479,7 +496,7 @@ THook(玩家操作物品, bool, "?useItemOn@GameMode@@UEAA_NAEAVItemStack@@AEBVBlockPo
 	BlockLegacy* bl = b->getBlockLegacy();
 	short bid = bl->getBlockItemID();
 	string bn = bl->getBlockName();
-	CallAll(u8"使用物品", "{s:K,s:i,s:i,s:s,s:s,s:i,s:[i,i,i]}",
+	CALLPYFUNCTION(u8"使用物品", "{s:K,s:i,s:i,s:s,s:s,s:i,s:[i,i,i]}",
 		"player", p,
 		"itemid", iid,
 		"itemaux", iaux,
@@ -496,7 +513,7 @@ THook(玩家放置方块, bool, "?mayPlace@BlockSource@@QEAA_NAEBVBlock@@AEBVBlockPos@
 		BlockLegacy* bl = b->getBlockLegacy();
 		short bid = bl->getBlockItemID();
 		string bn = bl->getBlockName();
-		CallAll(u8"放置方块", "{s:K,s:s,s:i,s:[i,i,i]}",
+		CALLPYFUNCTION(u8"放置方块", "{s:K,s:s,s:i,s:[i,i,i]}",
 			"player", p,
 			"blockname", bn.c_str(),
 			"blockid", bid,
@@ -514,7 +531,7 @@ THook(玩家破坏方块, bool, "?_destroyBlockInternal@GameMode@@AEAA_NAEBVBlockPos@@
 	BlockLegacy* bl = b->getBlockLegacy();
 	short bid = bl->getBlockItemID();
 	string bn = bl->getBlockName();
-	CallAll(u8"破坏方块", "{s:K,s:s,s:i,s:[i,i,i]}",
+	CALLPYFUNCTION(u8"破坏方块", "{s:K,s:s,s:i,s:[i,i,i]}",
 		"player", p,
 		"blockname", bn.c_str(),
 		"blockid", bid,
@@ -524,7 +541,7 @@ THook(玩家破坏方块, bool, "?_destroyBlockInternal@GameMode@@AEAA_NAEBVBlockPos@@
 }
 THook(玩家开箱准备, bool, "?use@ChestBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@E@Z",
 	VA _this, Player* p, BlockPos* bp) {
-	CallAll(u8"打开箱子", "{s:K,s:[i,i,i]}",
+	CALLPYFUNCTION(u8"打开箱子", "{s:K,s:[i,i,i]}",
 		"player", p,
 		"position", bp->x, bp->y, bp->z
 	);
@@ -532,7 +549,7 @@ THook(玩家开箱准备, bool, "?use@ChestBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@E@Z"
 }
 THook(玩家开桶准备, bool, "?use@BarrelBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@E@Z",
 	VA _this, Player* p, BlockPos* bp) {
-	CallAll(u8"打开木桶", "{s:K,s:[i,i,i]}",
+	CALLPYFUNCTION(u8"打开木桶", "{s:K,s:[i,i,i]}",
 		"player", p,
 		"position", bp->x, bp->y, bp->z
 	);
@@ -541,7 +558,7 @@ THook(玩家开桶准备, bool, "?use@BarrelBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@E@Z
 THook(关闭箱子, void, "?stopOpen@ChestBlockActor@@UEAAXAEAVPlayer@@@Z",
 	VA _this, Player* p) {
 	auto bp = (BlockPos*)(_this - 204);
-	CallAll(u8"关闭箱子", "{s:K,s:[i,i,i]}",
+	CALLPYFUNCTION(u8"关闭箱子", "{s:K,s:[i,i,i]}",
 		"player", p,
 		"position", bp->x, bp->y, bp->z
 	);
@@ -550,7 +567,7 @@ THook(关闭箱子, void, "?stopOpen@ChestBlockActor@@UEAAXAEAVPlayer@@@Z",
 THook(关闭木桶, void, "?stopOpen@BarrelBlockActor@@UEAAXAEAVPlayer@@@Z",
 	VA _this, Player* p) {
 	auto bp = (BlockPos*)(_this - 204);
-	CallAll(u8"关闭木桶", "{s:K,s:[i,i,i]}",
+	CALLPYFUNCTION(u8"关闭木桶", "{s:K,s:[i,i,i]}",
 		"player", p,
 		"position", bp->x, bp->y, bp->z
 	);
@@ -567,7 +584,7 @@ THook(玩家放入取出, void, "?containerContentChanged@LevelContainerModel@@UEAAXH@
 		VA v5 = (*(VA(**)(VA))(*(VA*)a1 + 160))(a1);
 		if (v5) {
 			ItemStack* i = (ItemStack*)(*(VA(**)(VA, VA))(*(VA*)v5 + 40))(v5, slot);
-			CallAll(u8"放入取出", "{s:K,s:s,s:i,s:[i,i,i],s:i,s:i,s:s,s:i,s:i}",
+			CALLPYFUNCTION(u8"放入取出", "{s:K,s:s,s:i,s:[i,i,i],s:i,s:i,s:s,s:i,s:i}",
 				"player", f(Player*, a1 + 208),
 				"blockname", bl->getBlockName().c_str(),
 				"blockid", bid,
@@ -584,7 +601,7 @@ THook(玩家放入取出, void, "?containerContentChanged@LevelContainerModel@@UEAAXH@
 }
 THook(玩家攻击, bool, "?attack@Player@@UEAA_NAEAVActor@@@Z",
 	Player* p, Actor* a) {
-	CallAll(u8"玩家攻击", "{s:K,s:K}",
+	CALLPYFUNCTION(u8"玩家攻击", "{s:K,s:K}",
 		"player", p,
 		"actor", a
 	);
@@ -594,7 +611,7 @@ THook(玩家切换维度, bool, "?_playerChangeDimension@Level@@AEAA_NPEAVPlayer@@AEAV
 	VA _this, Player* p, VA req) {
 	bool result = original(_this, p, req);
 	if (result) {
-		CallAll(u8"切换纬度", "K", p);
+		CALLPYFUNCTION(u8"切换纬度", "K", p);
 	}
 	return result;
 }
@@ -603,7 +620,7 @@ THook(生物死亡, void, "?die@Mob@@UEAAXAEBVActorDamageSource@@@Z",
 	char v72;
 	Actor* sa = SYMCALL<Actor*>("?fetchEntity@Level@@QEBAPEAVActor@@UActorUniqueID@@_N@Z",
 		f(VA, _this + 856), *(VA*)((*(VA(__fastcall**)(VA, char*))(*(VA*)dmsg + 64))(dmsg, &v72)), 0);
-	CallAll(u8"生物死亡", "{s:i,s:K,s:K}",
+	CALLPYFUNCTION(u8"生物死亡", "{s:i,s:K,s:K}",
 		"dmcase", f(unsigned, dmsg + 8),
 		"actor1", _this,
 		"actor2", sa//可能为0
@@ -615,7 +632,7 @@ THook(生物受伤, bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
 	char v72;
 	Actor* sa = SYMCALL<Actor*>("?fetchEntity@Level@@QEBAPEAVActor@@UActorUniqueID@@_N@Z",
 		f(VA, _this + 856), *(VA*)((*(VA(__fastcall**)(VA, char*))(*(VA*)dmsg + 64))(dmsg, &v72)), 0);
-	CallAll(u8"生物受伤", "{s:i,s:K,s:K,s:i}",
+	CALLPYFUNCTION(u8"生物受伤", "{s:i,s:K,s:K,s:i}",
 		"dmcase", f(unsigned, dmsg + 8),
 		"actor1", _this,
 		"actor2", sa,//可能为0
@@ -625,12 +642,12 @@ THook(生物受伤, bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
 }
 THook(玩家重生, void, "?respawn@Player@@UEAAXXZ",
 	Player* p) {
-	CallAll(u8"玩家重生", "K", p);
+	CALLPYFUNCTION(u8"玩家重生", "K", p);
 	original(p);
 }
 THook(聊天消息, void, "?fireEventPlayerMessage@MinecraftEventing@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@000@Z",
 	VA _this, string& sender, string& target, string& msg, string& style) {
-	CallAll(u8"聊天消息", "{s:s,s:s,s:s,s:s}",
+	CALLPYFUNCTION(u8"聊天消息", "{s:s,s:s,s:s,s:s}",
 		"sender", sender.c_str(),
 		"target", target.c_str(),
 		"msg", msg.c_str(),
@@ -644,7 +661,7 @@ THook(玩家输入文本, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentif
 		_this, id, *((char*)tp + 16));
 	if (p) {
 		string msg = *(string*)(tp + 80);
-		CallAll(u8"输入文本", "{s:K,s:s}",
+		CALLPYFUNCTION(u8"输入文本", "{s:K,s:s}",
 			"player", p,
 			"msg", msg.c_str()
 		);
@@ -657,7 +674,7 @@ THook(玩家输入指令, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentif
 		_this, id, *((char*)crp + 16));
 	if (p) {
 		string cmd = f(string, crp + 40);
-		CallAll(u8"输入指令", "{s:K,s:s}",
+		CALLPYFUNCTION(u8"输入指令", "{s:K,s:s}",
 			"player", p,
 			"cmd", cmd.c_str()
 		);
@@ -671,11 +688,12 @@ THook(玩家选择表单, void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormR
 		handle, id, f(char, fmp + 16));
 	if (PlayerCheck(p)) {
 		unsigned fid = f(unsigned, fmp + 40);
-		string x = f(string, fmp + 48);
-		if (x[x.length() - 1] == '\n')x[x.length() - 1] = '\0';
-		CallAll(u8"选择表单", "{s:K,s:s,s:i}",
+		string data = f(string, fmp + 48);
+		VA len = data.length()-1;
+		if (data[len] == '\n')data[len] = '\0';
+		CALLPYFUNCTION(u8"选择表单", "{s:K,s:s,s:i}",
 			"player", p,
-			"selected", x.c_str(),
+			"selected", data.c_str(),
 			"formid", fid
 		);
 	}
@@ -694,7 +712,7 @@ THook(更新命令方块, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentif
 		auto output = f(string, cbp + 96);
 		auto rawname = f(string, cbp + 128);
 		auto delay = f(int, cbp + 160);
-		CallAll(u8"命令方块更新", "{s:K,s:i,s:i,s:i,s:s,s:s,s:s,s:i,s:[i,i,i]}",
+		CALLPYFUNCTION(u8"命令方块更新", "{s:K,s:i,s:i,s:i,s:s,s:s,s:s,s:i,s:[i,i,i]}",
 			"player", p,
 			"mode", mode,
 			"condition", condition,
@@ -710,18 +728,9 @@ THook(更新命令方块, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentif
 }
 THook(爆炸监听, bool, "?explode@Level@@QEAAXAEAVBlockSource@@PEAVActor@@AEBVVec3@@M_N3M3@Z",
 	Level* _this, BlockSource* bs, Actor* a3, const Vec3 pos, float a5, bool a6, bool a7, float a8, bool a9) {
-	if (a3) {
-		CallAll(u8"爆炸监听", "{s:[f,f,f],s:s,s:i,s:i,s:i}",
-			"position", pos.x, pos.y, pos.z,
-			"entity", a3->getEntityTypeName().c_str(),
-			"entityid", a3->getEntityTypeId(),
-			"dimensionid", a3->getDimensionId(),
-			"power", a5
-		);
-		RET(_this, bs, a3, pos, a5, a6, a7, a8, a9);
-	}
-	CallAll(u8"爆炸监听", "{s:[f,f,f],s:i,s:i}",
-		"XYZ", pos.x, pos.y, pos.z,
+	CALLPYFUNCTION(u8"爆炸监听", "{s:K,s:[f,f,f],s:i,s:i}",
+		"actor",a3,
+		"position", pos.x, pos.y, pos.z,
 		"dimensionid", bs->getDimensionId(),
 		"power", a5
 	);
@@ -738,7 +747,7 @@ THook(命令方块执行, bool, "?performCommand@CommandBlockActor@@QEAA_NAEAVBlockSou
 	string cmd = f(string, _this + 264);
 	string rawname = f(string, _this + 296);
 	BlockPos bp = f(BlockPos, _this + 44);
-	CallAll(u8"命令方块执行", "{s:s,s:s,s:[i,i,i],s:i,s:i}",
+	CALLPYFUNCTION(u8"命令方块执行", "{s:s,s:s,s:[i,i,i],s:i,s:i}",
 		"cmd", cmd.c_str(),
 		"rawname", rawname.c_str(),
 		"position", bp.x, bp.y, bp.z,
@@ -749,11 +758,11 @@ THook(命令方块执行, bool, "?performCommand@CommandBlockActor@@QEAA_NAEAVBlockSou
 }
 #pragma endregion
 void init() {
-	puts("BDSpyrunner v0.0.8 Loading...");
+	puts("BDSpyrunner v0.0.8 for BDS 1.16.200 Loading...");
 	PyPreConfig cfg;
 	PyPreConfig_InitPythonConfig(&cfg);
 	Py_PreInitialize(&cfg);
-	PyObject* (*initfunc)(void) = [] {return PyModule_Create2(&mc, 1013); };
+	PyObject* (*initfunc)(void) = [] {return PyModule_Create(&mc); };
 	PyImport_AppendInittab("mc", initfunc); //增加一个模块
 	Py_Initialize();
 	_finddata_t fileinfo;//用于查找的句柄
@@ -766,10 +775,8 @@ void init() {
 		} while (!_findnext(handle, &fileinfo));
 		_findclose(handle);
 	}
-	else puts(u8"没有找到目录");
+	else puts("can't find py directory");
 }
-int __stdcall DllMain(HINSTANCE__* hModule, unsigned long res, void* lpReserved) {
-	if (res == 1)
-		init();
-	return 1;
+BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved){
+	if (dwReason == 1)init();return 1;
 }

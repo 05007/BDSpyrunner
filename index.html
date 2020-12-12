@@ -11,11 +11,11 @@
    color: #008000;
   }
   .string {
-   color: #D69D85;
+   color: #A31515;
   }
   .listen {
    font-size: larger;
-   color: #FFB502;
+   color: #3988e9;
   }
  </style>
 </head>
@@ -278,7 +278,7 @@
   <h2><a name="register">三、注册机制</a></h2>
 
   <span class="string">本插件运行平台采用事件驱动机制与游戏进行内容交互。注册监听关键字 通过特定事件被触发后的回传结果 进行判断、执行额外指令来实现插件功能。<br/>
-  为了最高效率 只有一个数据的监听器不采用字典传递 而是直接传递</span>
+  为了最高效率 只有一个数据的监听器采用单数据传递</span>
 
   <p class="listen">(1)后台输入</p>
   拦截可否：是<br/>
@@ -378,15 +378,15 @@
   拦截可否：否<br/>
   回传数据：<br/>
   <span class="string">dmcase</span> – 伤害具体原因ID<br/>
-  <span class="string">actor1</span> - 死亡生物指针<br/>
-  <span class="string">actor2</span> - 伤害源生物指针<br/>
+  <span class="string">actor1</span> - 死亡实体指针<br/>
+  <span class="string">actor2</span> - 伤害源实体指针<br/>
 
   <p class="listen">(14)生物受伤</p>
   拦截可否：是<br/>
   回传数据：<br/>
   <span class="string">dmcase</span> – 伤害具体原因ID<br/>
-  <span class="string">actor1</span> - 死亡生物指针<br/>
-  <span class="string">actor2</span> - 伤害源生物指针<br/>
+  <span class="string">actor1</span> - 死亡实体指针<br/>
+  <span class="string">actor2</span> - 伤害源实体指针<br/>
   <span class="string">damage</span> - 理论伤害值<br/>
 
   <p class="listen">(15)玩家重生</p>
@@ -433,7 +433,7 @@
   拦截可否：是<br/>
   回传数据：<br/>
   <span class="string">cmd</span> – 将被执行的指令<br/>
-  <!-- <span class="string">(暂时没有)delay</span> – 命令设定的间隔时间<br/> -->
+  <!-- <span class="string">delay</span> – 命令设定的间隔时间<br/> -->
   <span class="string">rawname</span> – 命令方块名称<br/>
   <span class="string">position</span> – 执行者所在位置<br/>
   <span class="string">mode</span> – 命令方块模式<br/>
@@ -472,9 +472,8 @@
   <p class="listen">(26)爆炸监听</p>
   拦截可否：是<br/>
   回传数据：<br/>
+  <span class="string">actor</span> – 爆炸者实体指针<br/>
   <span class="string">position</span> – 爆炸点所在位置<br/>
-  <span class="string">entity</span> – 爆炸者实体标识名<br/>
-  <span class="string">entityid</span> – 爆炸者实体标识ID<br/>
   <span class="string">dimensionid</span> – 爆炸者所处维度ID<br/>
   <span class="string">power</span> – 爆炸强度
  </div>

@@ -235,7 +235,7 @@ struct Actor {
 struct Mob : Actor {
 	// 获取状态列表
 	auto getEffects() {	// IDA Mob::addAdditionalSaveData
-		return (vector<MobEffectInstance>*)((VA*)this + 152);
+		return (vector<MobEffectInstance>*)((VA*)this + 190);
 	}
 	// 获取装备容器
 	VA getArmor() {		// IDA Mob::addAdditionalSaveData
@@ -284,7 +284,7 @@ struct Player : Mob {
 	}
 	// 获取背包
 	Container* getContainer() {
-		return (Container*)f(VA, f(VA, this + 366) + 176);
+		return (Container*)f(VA, f(VA, this + 3048) + 176);
 	}
 	VA getContainerManager() {
 		return (VA)this + 2912;		// IDA Player::setContainerManager
@@ -347,7 +347,10 @@ struct Player : Mob {
 };
 #pragma endregion
 #pragma region 计分板
-struct ScoreboardId {};
+struct ScoreboardId {
+	VA id;
+	VA* ptr;
+};
 struct PlayerScore {
 	VA getscore() {
 		return f(VA, this + 4);
@@ -362,6 +365,16 @@ struct ScoreInfo {
 		return f(int, this + 12);
 	}
 };
+struct ScorePacketInfo {
+	ScoreboardId sid;
+	std::string obj_name;
+	unsigned score;
+	char type;
+	VA pid;
+	VA aid;
+	std::string fake_name;
+};
+static_assert(offsetof(ScorePacketInfo, fake_name) == 72);
 struct Objective {
 	ScoreInfo* getPlayerScore(ScoreboardId* a2) {
 		char a1[12];

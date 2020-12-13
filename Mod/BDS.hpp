@@ -1,5 +1,5 @@
 #pragma once
-#include "bdxcore.h"
+#include "pch.h"
 #define f(type,ptr) (*(type*)(ptr))
 using namespace std;
 #pragma region Block
@@ -7,7 +7,7 @@ struct BlockLegacy {
 	string getBlockName() {
 		return f(string, this + 128);
 	}
-	short getBlockItemID() {	// IDA VanillaItems::initCreativeItemsCallback Item::beginCreativeGroup "itemGroup.name.planks"2533 line
+	short getBlockItemID() {// IDA VanillaItems::initCreativeItemsCallback Item::beginCreativeGroup "itemGroup.name.planks"2533 line
 		short v3 = f(short, this + 328);
 		if (v3 < 0x100) {
 			return v3;
@@ -75,7 +75,6 @@ struct ItemStackBase {
 	ItemStackBase* mChargedItem;
 	VA uk;
 
-	//ItemStackBase() { memcpy(this, GetServerSymbol("?EMPTY_ITEM@ItemStack@@2V1@B"), 0x90); }
 	// 取物品ID
 	short getId() {
 		return SYMCALL<short>("?getId@ItemStackBase@@QEBAFXZ", this);
@@ -92,7 +91,7 @@ struct ItemStackBase {
 		return str;
 	}
 	// 取容器内数量
-	int getStackSize() {			// IDA ContainerModel::networkUpdateItem
+	int getStackSize() {// IDA ContainerModel::networkUpdateItem
 		return f(int, this + 34);
 	}
 	// 判断是否空容器
@@ -207,29 +206,16 @@ struct Actor {
 	}
 	// 获取生命值
 	pair<float, float> getHealth() {
-		VA bpattrmap = f(VA, this + 135);// IDA ScriptHealthComponent::retrieveComponentFrom
-		if (bpattrmap) {
-			VA hattr = SYMCALL<VA>("?getMutableInstance@BaseAttributeMap@@QEAAPEAVAttributeInstance@@I@Z",
-				bpattrmap, 7);//SYM_OBJECT(UINT32, 0x019700B8 + 4));// SharedAttributes::HEALTH
-			if (hattr) {
-				return { f(float, hattr + 33), f(float, hattr + 32) };
-			}
-		}
-		return { 0.0f,0.0f };
+		VA hattr = SYMCALL<VA>("?getMutableInstance@BaseAttributeMap@@QEAAPEAVAttributeInstance@@I@Z",// IDA ScriptHealthComponent::applyComponentTo line 30 132 180
+			f(VA, this + 1144), f(unsigned, (VA)GetServerSymbol("?HEALTH@SharedAttributes@@2VAttribute@@B") + 4));
+		return { f(float, hattr + 132), f(float, hattr + 128) };
 	}
-	bool setHealth(float& value, float& max) {
-		VA bpattrmap = ((VA*)this)[135];
-		if (bpattrmap) {
-			VA hattr = SYMCALL<VA>("?getMutableInstance@BaseAttributeMap@@QEAAPEAVAttributeInstance@@I@Z",
-				bpattrmap, 7);// SYM_OBJECT(UINT32, 0x019700B8 + 4));// SharedAttributes::HEALTH
-			if (hattr) {
-				f(float, hattr + 33) = value;
-				f(float, hattr + 32) = max;
-				SYMCALL<VA>("?_setDirty@AttributeInstance@@AEAAXXZ", hattr);
-				return true;
-			}
-		}
-		return false;
+	void setHealth(float& value, float& max) {
+		VA hattr = SYMCALL<VA>("?getMutableInstance@BaseAttributeMap@@QEAAPEAVAttributeInstance@@I@Z",// IDA ScriptHealthComponent::applyComponentTo line 30 132 180
+			f(VA, this + 1144), f(unsigned, (VA)GetServerSymbol("?HEALTH@SharedAttributes@@2VAttribute@@B") + 4));
+		f(float, hattr + 132) = value;
+		f(float, hattr + 128) = max;
+		SYMCALL<void>("?_setDirty@AttributeInstance@@AEAAXXZ", hattr);
 	}
 };
 struct Mob : Actor {
@@ -347,10 +333,7 @@ struct Player : Mob {
 };
 #pragma endregion
 #pragma region 计分板
-struct ScoreboardId {
-	VA id;
-	VA* ptr;
-};
+struct ScoreboardId {};
 struct PlayerScore {
 	VA getscore() {
 		return f(VA, this + 4);
@@ -365,16 +348,6 @@ struct ScoreInfo {
 		return f(int, this + 12);
 	}
 };
-struct ScorePacketInfo {
-	ScoreboardId sid;
-	std::string obj_name;
-	unsigned score;
-	char type;
-	VA pid;
-	VA aid;
-	std::string fake_name;
-};
-static_assert(offsetof(ScorePacketInfo, fake_name) == 72);
 struct Objective {
 	ScoreInfo* getPlayerScore(ScoreboardId* a2) {
 		char a1[12];

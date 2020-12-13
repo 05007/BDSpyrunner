@@ -316,7 +316,6 @@
   <span class="string">blockname</span> – 方块名称<br/>
   <span class="string">player</span> - 玩家指针<br/>
 
-
   <p class="listen">(6)破坏方块</p>
   拦截可否：是<br/>
   回传数据：<br/>
@@ -325,13 +324,11 @@
   <span class="string">blockname</span> – 方块名称<br/>
   <span class="string">player</span> - 玩家指针<br/>
 
-
   <p class="listen">(7)打开箱子</p>
   拦截可否：是<br/>
   回传数据：<br/>
   <span class="string">position</span> – 操作方块所在位置<br/>
   <span class="string">player</span> - 玩家指针<br/>
-
 
   <p class="listen">(8)打开木桶</p>
   拦截可否：否<br/>
@@ -339,20 +336,17 @@
   <span class="string">position</span> – 操作方块所在位置<br/>
   <span class="string">player</span> - 玩家指针<br/>
 
-
   <p class="listen">(9)关闭箱子</p>
   拦截可否：否<br/>
   回传数据：<br/>
   <span class="string">position</span> – 操作方块所在位置<br/>
   <span class="string">player</span> - 玩家指针<br/>
 
-
   <p class="listen">(10)关闭木桶</p>
   拦截可否：否<br/>
   回传数据：<br/>
   <span class="string">position</span> – 操作方块所在位置<br/>
   <span class="string">player</span> - 玩家指针<br/>
-
 
   <p class="listen">(11)放入取出</p>
   拦截可否：否<br/>
@@ -367,12 +361,10 @@
   <span class="string">slot</span> – 操作格子位置<br/>
   <span class="string">player</span> - 玩家指针<br/>
 
-
   <p class="listen">(12)切换纬度</p>
   拦截可否：否<br/>
   回传数据：<br/>
   <span class="string">player</span> - 玩家指针<br/>
-
 
   <p class="listen">(13)生物死亡</p>
   拦截可否：否<br/>
@@ -394,21 +386,19 @@
   回传数据： <br/>
   <span class="string">player</span> - 玩家指针<br/>
 
-
   <p class="listen">(16)聊天监听</p>
   拦截可否：否<br/>
   回传数据：<br/>
   <span class="string">sender</span> – 发送者名字<br/>
   <span class="string">target</span> – 接收者名字<br/>
   <span class="string">msg</span> – 接收到的信息<br/>
-  <span class="string">style</span> – 聊天类型
+  <span class="string">style</span> – 聊天类型<br\>
 
   <p class="listen">(17)玩家输入文本</p>
   拦截可否：是<br/>
   回传数据：<br/>
   <span class="string">msg</span> – 输入的文本<br/>
   <span class="string">player</span> - 玩家指针<br/>
-
 
   <p class="listen">(18)更新命令方块</p>
   拦截可否：是<br/>
@@ -451,7 +441,6 @@
   <span class="string">actionid</span> – 选择项<br/>
   <span class="string">actions</span> – 指令列表
 
-
   <p class="listen">(22)加载名字</p>
   拦截可否：否<br/>
   回传数据：<br/>
@@ -467,15 +456,24 @@
   回传数据：<br/>
   <span class="string">actor</span> – 被攻击实体指针<br/>
   <span class="string">player</span> - 玩家指针<br/>
-
-
+  
   <p class="listen">(26)爆炸监听</p>
   拦截可否：是<br/>
   回传数据：<br/>
   <span class="string">actor</span> – 爆炸者实体指针<br/>
   <span class="string">position</span> – 爆炸点所在位置<br/>
   <span class="string">dimensionid</span> – 爆炸者所处维度ID<br/>
-  <span class="string">power</span> – 爆炸强度
+  <span class="string">power</span> – 爆炸强度<br\>
+  
+  <p class="listen">(27)穿戴监听</p>
+  拦截可否：否<br/>
+  回传数据：<br/>
+  <span class="string">player</span> - 玩家指针<br/>
+  <span class="string">itemid</span> – 物品ID<br/>
+  <span class="string">itemcount</span> – 物品数量<br/>
+  <span class="string">itemname</span> – 物品名字<br/>
+  <span class="string">itemaux</span> – 物品特殊值<br/>
+  <span class="string">slot</span> – 操作格子位置<br/>
  </div>
 </body>
 

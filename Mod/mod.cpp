@@ -1,17 +1,17 @@
 #include "pch.h"
+#include "BDS.hpp"
 #pragma warning(disable:4996)
-#pragma "很不错"
 #pragma region 宏定义
 //调用所有函数
-#define CALLPYFUNCTION(type,...)							\
+#define CALL_PY_FUNCTION(type, ...)							\
 bool res = true;									\
 for (PyObject* fn :PyFuncs[type]) {					\
 	if(PyObject_CallFunction(fn,__VA_ARGS__)==Py_False)res = false;\
 }PyErr_Print()
 #define out(...) cout <<__VA_ARGS__<< endl
-//THook返回判断
+//Hook返回判断
 #define RET(...) if (!res) return 0;return original(__VA_ARGS__)
-#define cpkt(pkt,p)	SYMCALL<VA>("?createPacket@MinecraftPackets@@SA?AV?$shared_ptr@VPacket@@@std@@W4MinecraftPacketIds@@@Z",&pkt, p);
+#define cpkt(pkt, p) SYMCALL<VA>("?createPacket@MinecraftPackets@@SA?AV?$shared_ptr@VPacket@@@std@@W4MinecraftPacketIds@@@Z",&pkt, p);
 #define PlayerCheck(ptr)  PlayerList[(Player*)ptr]
 #pragma endregion
 #pragma region 全局变量
@@ -106,13 +106,7 @@ static bool SetScorePacket(Player* p, char type, string name) {
 		VA pkt;//SetScorePacket
 		cpkt(pkt, 108);
 		f(char, pkt + 40) = type;//{set,remove}
-		ScorePacketInfo s;
-		s.sid = *(_scoreboard->getScoreboardId(&name));
-		s.score = 10;
-		s.fake_name = name;
-		s.type = 3;
-		s.obj_name = name;
-		f(vector<ScorePacketInfo>, pkt + 48) = { s };
+		//f(vector<ScorePacketInfo>, pkt + 48) = { s };
 		p->sendPacket(pkt);
 	}
 	return true;
@@ -177,8 +171,8 @@ static PyObject* api_sendCustomForm(PyObject* self, PyObject* args) {
 static PyObject* api_sendSimpleForm(PyObject* self, PyObject* args) {
 	const char* title, * content, * buttons;
 	if (PyArg_ParseTuple(args, "Ksss:sendSimpleForm", &_p, &title, &content, &buttons)) {
-		char str[512];
-		sprintf(str, R"({"title":"%s","content":"%s","buttons":%s,"type":"form"})", title, content, buttons);
+		char str[0x400];
+		sprintf_s(str, R"({"title":"%s","content":"%s","buttons":%s,"type":"form"})", title, content, buttons);
 		return PyLong_FromLong(ModalFormRequestPacket(_p, str));
 	}
 	return PyLong_FromLong(0);
@@ -186,8 +180,8 @@ static PyObject* api_sendSimpleForm(PyObject* self, PyObject* args) {
 static PyObject* api_sendModalForm(PyObject* self, PyObject* args) {
 	const char* title, * content, * button1, * button2;
 	if (PyArg_ParseTuple(args, "Kssss:sendModalForm", &_p, &title, &content, &button1, &button2)) {
-		char str[512];
-		sprintf(str, R"({"title":"%s","content":"%s","button1":"%s","button2":"%s","type":"modal"})", title, content, button1, button2);
+		char str[0x400];
+		sprintf_s(str, R"({"title":"%s","content":"%s","button1":"%s","button2":"%s","type":"modal"})", title, content, button1, button2);
 		return PyLong_FromLong(ModalFormRequestPacket(_p, str));
 	}
 	return PyLong_FromLong(0);
@@ -420,25 +414,28 @@ PyMethodDef m[] = {
    {0,0,0,0}
 };
 // 模块声明
-PyModuleDef mc = { PyModuleDef_HEAD_INIT, "mc", 0, -1,m,0,0,0,0 };
+PyModuleDef mc = { PyModuleDef_HEAD_INIT, "mc", 0, -1, m, 0, 0, 0, 0 };
+extern "C" PyObject * mc_init() {
+	return PyModule_Create(&mc);
+}
 #pragma endregion
 #pragma region Hook
-THook(获取指令队列, VA, "??0?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@QEAA@_K@Z",
+Hook(获取指令队列, VA, "??0?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@QEAA@_K@Z",
 	VA _this) {
 	_cmdqueue = original(_this);
 	return _cmdqueue;
 }
-THook(获取地图初始化信息, VA, "??0Level@@QEAA@AEBV?$not_null@V?$NonOwnerPointer@VSoundPlayerInterface@@@Bedrock@@@gsl@@V?$unique_ptr@VLevelStorage@@U?$default_delete@VLevelStorage@@@std@@@std@@V?$unique_ptr@VLevelLooseFileStorage@@U?$default_delete@VLevelLooseFileStorage@@@std@@@4@AEAVIMinecraftEventing@@_NEAEAVScheduler@@AEAVStructureManager@@AEAVResourcePackManager@@AEAVIEntityRegistryOwner@@V?$unique_ptr@VBlockComponentFactory@@U?$default_delete@VBlockComponentFactory@@@std@@@4@V?$unique_ptr@VBlockDefinitionGroup@@U?$default_delete@VBlockDefinitionGroup@@@std@@@4@@Z",
+Hook(获取地图初始化信息, VA, "??0Level@@QEAA@AEBV?$not_null@V?$NonOwnerPointer@VSoundPlayerInterface@@@Bedrock@@@gsl@@V?$unique_ptr@VLevelStorage@@U?$default_delete@VLevelStorage@@@std@@@std@@V?$unique_ptr@VLevelLooseFileStorage@@U?$default_delete@VLevelLooseFileStorage@@@std@@@4@AEAVIMinecraftEventing@@_NEAEAVScheduler@@AEAVStructureManager@@AEAVResourcePackManager@@AEAVIEntityRegistryOwner@@V?$unique_ptr@VBlockComponentFactory@@U?$default_delete@VBlockComponentFactory@@@std@@@4@V?$unique_ptr@VBlockDefinitionGroup@@U?$default_delete@VBlockDefinitionGroup@@@std@@@4@@Z",
 	VA a1, VA a2, VA a3, VA a4, VA a5, VA a6, VA a7, VA a8, VA a9, VA a10, VA a11, VA a12, VA a13) {
 	_level = original(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13);
 	return _level;
 }
-THook(获取游戏初始化信息, VA, "??0GameSession@@QEAA@AEAVNetworkHandler@@V?$unique_ptr@VServerNetworkHandler@@U?$default_delete@VServerNetworkHandler@@@std@@@std@@AEAVLoopbackPacketSender@@V?$unique_ptr@VNetEventCallback@@U?$default_delete@VNetEventCallback@@@std@@@3@V?$unique_ptr@VLevel@@U?$default_delete@VLevel@@@std@@@3@E@Z",
+Hook(获取游戏初始化信息, VA, "??0GameSession@@QEAA@AEAVNetworkHandler@@V?$unique_ptr@VServerNetworkHandler@@U?$default_delete@VServerNetworkHandler@@@std@@@std@@AEAVLoopbackPacketSender@@V?$unique_ptr@VNetEventCallback@@U?$default_delete@VNetEventCallback@@@std@@@3@V?$unique_ptr@VLevel@@U?$default_delete@VLevel@@@std@@@3@E@Z",
 	VA a1, VA a2, VA a3, VA a4, VA a5, VA a6, VA a7) {
 	_ServerNetworkHandle = f(VA, a3);
 	return original(a1, a2, a3, a4, a5, a6, a7);
 }
-THook(命令注册, void, "?setup@KillCommand@@SAXAEAVCommandRegistry@@@Z",//"?setup@ChangeSettingCommand@@SAXAEAVCommandRegistry@@@Z",
+Hook(命令注册, void, "?setup@KillCommand@@SAXAEAVCommandRegistry@@@Z",//"?setup@ChangeSettingCommand@@SAXAEAVCommandRegistry@@@Z",
 	VA _this) {
 	for (auto& cmd : Command) {
 		SYMCALL<void>("?registerCommand@CommandRegistry@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PEBDW4CommandPermissionLevel@@UCommandFlag@@3@Z",
@@ -446,20 +443,20 @@ THook(命令注册, void, "?setup@KillCommand@@SAXAEAVCommandRegistry@@@Z",//"?setup
 	}
 	original(_this);
 }
-THook(计分板, Scoreboard*, "??0ServerScoreboard@@QEAA@VCommandSoftEnumRegistry@@PEAVLevelStorage@@@Z",
+Hook(计分板, Scoreboard*, "??0ServerScoreboard@@QEAA@VCommandSoftEnumRegistry@@PEAVLevelStorage@@@Z",
 	VA _this, VA a2, VA a3) {
 	_scoreboard = (Scoreboard*)original(_this, a2, a3);
 	return _scoreboard;
 }
-THook(后台输出, VA, "??$_Insert_string@DU?$char_traits@D@std@@_K@std@@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@0@AEAV10@QEBD_K@Z",
+Hook(后台输出, VA, "??$_Insert_string@DU?$char_traits@D@std@@_K@std@@YAAEAV?$basic_ostream@DU?$char_traits@D@std@@@0@AEAV10@QEBD_K@Z",
 	VA handle, const char* str, VA size) {
 	if (handle == STD_COUT_HANDLE) {
-		CALLPYFUNCTION(u8"后台输出", "s", str);
+		CALL_PY_FUNCTION(u8"后台输出", "s", str);
 		if (!res)return 0;
 	}
 	return original(handle, str, size);
 }
-THook(后台输入, bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@AEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
+Hook(后台输入, bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@?$SPSCQueue@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@$0CAA@@@AEAA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
 	VA _this, string* cmd) {
 	if (*cmd == "pyreload") {
 		Py_Finalize();
@@ -467,27 +464,27 @@ THook(后台输入, bool, "??$inner_enqueue@$0A@AEBV?$basic_string@DU?$char_traits@D
 		init();
 		return false;
 	}
-	CALLPYFUNCTION(u8"后台输入", "s", (*cmd).c_str());
+	CALL_PY_FUNCTION(u8"后台输入", "s", (*cmd).c_str());
 	RET(_this, cmd);
 }
-THook(玩家加入, VA, "?onPlayerJoined@ServerScoreboard@@UEAAXAEBVPlayer@@@Z",
+Hook(玩家加入, VA, "?onPlayerJoined@ServerScoreboard@@UEAAXAEBVPlayer@@@Z",
 	VA a1, Player* p) {
 	PlayerList[p] = true;
-	CALLPYFUNCTION(u8"加载名字", "K", p);
+	CALL_PY_FUNCTION(u8"加载名字", "K", p);
 	return original(a1, p);
 }
-THook(玩家离开游戏, void, "?_onPlayerLeft@ServerNetworkHandler@@AEAAXPEAVServerPlayer@@_N@Z",
+Hook(玩家离开游戏, void, "?_onPlayerLeft@ServerNetworkHandler@@AEAAXPEAVServerPlayer@@_N@Z",
 	VA _this, Player* p, char v3) {
+	CALL_PY_FUNCTION(u8"离开游戏", "K", p);
 	PlayerList.erase(p);
-	CALLPYFUNCTION(u8"离开游戏", "K", p);
 	return original(_this, p, v3);
 }
-THook(玩家捡起物品, bool, "?take@Player@@QEAA_NAEAVActor@@HH@Z",
+Hook(玩家捡起物品, bool, "?take@Player@@QEAA_NAEAVActor@@HH@Z",
 	Player* p, Actor* a, VA a3, VA a4) {
-	CALLPYFUNCTION(u8"捡起物品", "");
+	CALL_PY_FUNCTION(u8"捡起物品", "");
 	return original(p, a, a3, a4);
 }
-THook(玩家操作物品, bool, "?useItemOn@GameMode@@UEAA_NAEAVItemStack@@AEBVBlockPos@@EAEBVVec3@@PEBVBlock@@@Z",
+Hook(玩家操作物品, bool, "?useItemOn@GameMode@@UEAA_NAEAVItemStack@@AEBVBlockPos@@EAEBVVec3@@PEBVBlock@@@Z",
 	VA _this, ItemStack* item, BlockPos* bp, unsigned __int8 a4, VA v5, Block* b) {
 	Player* p = f(Player*, _this + 8);
 	short iid = item->getId();
@@ -496,7 +493,7 @@ THook(玩家操作物品, bool, "?useItemOn@GameMode@@UEAA_NAEAVItemStack@@AEBVBlockPo
 	BlockLegacy* bl = b->getBlockLegacy();
 	short bid = bl->getBlockItemID();
 	string bn = bl->getBlockName();
-	CALLPYFUNCTION(u8"使用物品", "{s:K,s:i,s:i,s:s,s:s,s:i,s:[i,i,i]}",
+	CALL_PY_FUNCTION(u8"使用物品", "{s:K,s:i,s:i,s:s,s:s,s:i,s:[i,i,i]}",
 		"player", p,
 		"itemid", iid,
 		"itemaux", iaux,
@@ -507,13 +504,13 @@ THook(玩家操作物品, bool, "?useItemOn@GameMode@@UEAA_NAEAVItemStack@@AEBVBlockPo
 	);
 	RET(_this, item, bp, a4, v5, b);
 }
-THook(玩家放置方块, bool, "?mayPlace@BlockSource@@QEAA_NAEBVBlock@@AEBVBlockPos@@EPEAVActor@@_N@Z",
+Hook(玩家放置方块, bool, "?mayPlace@BlockSource@@QEAA_NAEBVBlock@@AEBVBlockPos@@EPEAVActor@@_N@Z",
 	BlockSource* _this, Block* b, BlockPos* bp, unsigned __int8 a4, Actor* p, bool _bool) {
 	if (p && PlayerCheck(p)) {
 		BlockLegacy* bl = b->getBlockLegacy();
 		short bid = bl->getBlockItemID();
 		string bn = bl->getBlockName();
-		CALLPYFUNCTION(u8"放置方块", "{s:K,s:s,s:i,s:[i,i,i]}",
+		CALL_PY_FUNCTION(u8"放置方块", "{s:K,s:s,s:i,s:[i,i,i]}",
 			"player", p,
 			"blockname", bn.c_str(),
 			"blockid", bid,
@@ -523,7 +520,7 @@ THook(玩家放置方块, bool, "?mayPlace@BlockSource@@QEAA_NAEBVBlock@@AEBVBlockPos@
 	}
 	return original(_this, b, bp, a4, p, _bool);
 }
-THook(玩家破坏方块, bool, "?_destroyBlockInternal@GameMode@@AEAA_NAEBVBlockPos@@E@Z",
+Hook(玩家破坏方块, bool, "?_destroyBlockInternal@GameMode@@AEAA_NAEBVBlockPos@@E@Z",
 	VA _this, BlockPos* bp) {
 	Player* p = f(Player*, _this + 8);
 	BlockSource* bs = f(BlockSource*, f(VA, _this + 8) + 840);
@@ -531,7 +528,7 @@ THook(玩家破坏方块, bool, "?_destroyBlockInternal@GameMode@@AEAA_NAEBVBlockPos@@
 	BlockLegacy* bl = b->getBlockLegacy();
 	short bid = bl->getBlockItemID();
 	string bn = bl->getBlockName();
-	CALLPYFUNCTION(u8"破坏方块", "{s:K,s:s,s:i,s:[i,i,i]}",
+	CALL_PY_FUNCTION(u8"破坏方块", "{s:K,s:s,s:i,s:[i,i,i]}",
 		"player", p,
 		"blockname", bn.c_str(),
 		"blockid", bid,
@@ -539,41 +536,41 @@ THook(玩家破坏方块, bool, "?_destroyBlockInternal@GameMode@@AEAA_NAEBVBlockPos@@
 	);
 	RET(_this, bp);
 }
-THook(玩家开箱准备, bool, "?use@ChestBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@E@Z",
+Hook(玩家开箱准备, bool, "?use@ChestBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@E@Z",
 	VA _this, Player* p, BlockPos* bp) {
-	CALLPYFUNCTION(u8"打开箱子", "{s:K,s:[i,i,i]}",
+	CALL_PY_FUNCTION(u8"打开箱子", "{s:K,s:[i,i,i]}",
 		"player", p,
 		"position", bp->x, bp->y, bp->z
 	);
 	RET(_this, p, bp);
 }
-THook(玩家开桶准备, bool, "?use@BarrelBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@E@Z",
+Hook(玩家开桶准备, bool, "?use@BarrelBlock@@UEBA_NAEAVPlayer@@AEBVBlockPos@@E@Z",
 	VA _this, Player* p, BlockPos* bp) {
-	CALLPYFUNCTION(u8"打开木桶", "{s:K,s:[i,i,i]}",
+	CALL_PY_FUNCTION(u8"打开木桶", "{s:K,s:[i,i,i]}",
 		"player", p,
 		"position", bp->x, bp->y, bp->z
 	);
 	RET(_this, p, bp);
 }
-THook(关闭箱子, void, "?stopOpen@ChestBlockActor@@UEAAXAEAVPlayer@@@Z",
+Hook(关闭箱子, void, "?stopOpen@ChestBlockActor@@UEAAXAEAVPlayer@@@Z",
 	VA _this, Player* p) {
 	auto bp = (BlockPos*)(_this - 204);
-	CALLPYFUNCTION(u8"关闭箱子", "{s:K,s:[i,i,i]}",
+	CALL_PY_FUNCTION(u8"关闭箱子", "{s:K,s:[i,i,i]}",
 		"player", p,
 		"position", bp->x, bp->y, bp->z
 	);
 	original(_this, p);
 }
-THook(关闭木桶, void, "?stopOpen@BarrelBlockActor@@UEAAXAEAVPlayer@@@Z",
+Hook(关闭木桶, void, "?stopOpen@BarrelBlockActor@@UEAAXAEAVPlayer@@@Z",
 	VA _this, Player* p) {
 	auto bp = (BlockPos*)(_this - 204);
-	CALLPYFUNCTION(u8"关闭木桶", "{s:K,s:[i,i,i]}",
+	CALL_PY_FUNCTION(u8"关闭木桶", "{s:K,s:[i,i,i]}",
 		"player", p,
 		"position", bp->x, bp->y, bp->z
 	);
 	original(_this, p);
 }
-THook(玩家放入取出, void, "?containerContentChanged@LevelContainerModel@@UEAAXH@Z",
+Hook(玩家放入取出, void, "?containerContentChanged@LevelContainerModel@@UEAAXH@Z",
 	VA a1, VA slot) {
 	VA v3 = f(VA, a1 + 208);// IDA LevelContainerModel::_getContainer line 15 25
 	BlockSource* bs = f(BlockSource*, f(VA, v3 + 848) + 88);
@@ -584,7 +581,7 @@ THook(玩家放入取出, void, "?containerContentChanged@LevelContainerModel@@UEAAXH@
 		VA v5 = (*(VA(**)(VA))(*(VA*)a1 + 160))(a1);
 		if (v5) {
 			ItemStack* i = (ItemStack*)(*(VA(**)(VA, VA))(*(VA*)v5 + 40))(v5, slot);
-			CALLPYFUNCTION(u8"放入取出", "{s:K,s:s,s:i,s:[i,i,i],s:i,s:i,s:s,s:i,s:i}",
+			CALL_PY_FUNCTION(u8"放入取出", "{s:K,s:s,s:i,s:[i,i,i],s:i,s:i,s:s,s:i,s:i}",
 				"player", f(Player*, a1 + 208),
 				"blockname", bl->getBlockName().c_str(),
 				"blockid", bid,
@@ -599,40 +596,40 @@ THook(玩家放入取出, void, "?containerContentChanged@LevelContainerModel@@UEAAXH@
 	}
 	original(a1, slot);
 }
-THook(玩家攻击, bool, "?attack@Player@@UEAA_NAEAVActor@@@Z",
+Hook(玩家攻击, bool, "?attack@Player@@UEAA_NAEAVActor@@@Z",
 	Player* p, Actor* a) {
-	CALLPYFUNCTION(u8"玩家攻击", "{s:K,s:K}",
+	CALL_PY_FUNCTION(u8"玩家攻击", "{s:K,s:K}",
 		"player", p,
 		"actor", a
 	);
 	RET(p, a);
 }
-THook(玩家切换维度, bool, "?_playerChangeDimension@Level@@AEAA_NPEAVPlayer@@AEAVChangeDimensionRequest@@@Z",
+Hook(玩家切换维度, bool, "?_playerChangeDimension@Level@@AEAA_NPEAVPlayer@@AEAVChangeDimensionRequest@@@Z",
 	VA _this, Player* p, VA req) {
 	bool result = original(_this, p, req);
 	if (result) {
-		CALLPYFUNCTION(u8"切换纬度", "K", p);
+		CALL_PY_FUNCTION(u8"切换纬度", "K", p);
 	}
 	return result;
 }
-THook(生物死亡, void, "?die@Mob@@UEAAXAEBVActorDamageSource@@@Z",
+Hook(生物死亡, void, "?die@Mob@@UEAAXAEBVActorDamageSource@@@Z",
 	Mob* _this, VA dmsg) {
 	char v72;
 	Actor* sa = SYMCALL<Actor*>("?fetchEntity@Level@@QEBAPEAVActor@@UActorUniqueID@@_N@Z",
 		f(VA, _this + 856), *(VA*)((*(VA(__fastcall**)(VA, char*))(*(VA*)dmsg + 64))(dmsg, &v72)), 0);
-	CALLPYFUNCTION(u8"生物死亡", "{s:i,s:K,s:K}",
+	CALL_PY_FUNCTION(u8"生物死亡", "{s:i,s:K,s:K}",
 		"dmcase", f(unsigned, dmsg + 8),
 		"actor1", _this,
 		"actor2", sa//可能为0
 	);
 	if (res) original(_this, dmsg);
 }
-THook(生物受伤, bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
+Hook(生物受伤, bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
 	Mob* _this, VA dmsg, int a3, bool a4, bool a5) {
 	char v72;
 	Actor* sa = SYMCALL<Actor*>("?fetchEntity@Level@@QEBAPEAVActor@@UActorUniqueID@@_N@Z",
 		f(VA, _this + 856), *(VA*)((*(VA(__fastcall**)(VA, char*))(*(VA*)dmsg + 64))(dmsg, &v72)), 0);
-	CALLPYFUNCTION(u8"生物受伤", "{s:i,s:K,s:K,s:i}",
+	CALL_PY_FUNCTION(u8"生物受伤", "{s:i,s:K,s:K,s:i}",
 		"dmcase", f(unsigned, dmsg + 8),
 		"actor1", _this,
 		"actor2", sa,//可能为0
@@ -640,14 +637,14 @@ THook(生物受伤, bool, "?_hurt@Mob@@MEAA_NAEBVActorDamageSource@@H_N1@Z",
 	);
 	RET(_this, dmsg, a3, a4, a5);
 }
-THook(玩家重生, void, "?respawn@Player@@UEAAXXZ",
+Hook(玩家重生, void, "?respawn@Player@@UEAAXXZ",
 	Player* p) {
-	CALLPYFUNCTION(u8"玩家重生", "K", p);
+	CALL_PY_FUNCTION(u8"玩家重生", "K", p);
 	original(p);
 }
-THook(聊天消息, void, "?fireEventPlayerMessage@MinecraftEventing@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@000@Z",
+Hook(聊天消息, void, "?fireEventPlayerMessage@MinecraftEventing@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@000@Z",
 	VA _this, string& sender, string& target, string& msg, string& style) {
-	CALLPYFUNCTION(u8"聊天消息", "{s:s,s:s,s:s,s:s}",
+	CALL_PY_FUNCTION(u8"聊天消息", "{s:s,s:s,s:s,s:s}",
 		"sender", sender.c_str(),
 		"target", target.c_str(),
 		"msg", msg.c_str(),
@@ -655,33 +652,33 @@ THook(聊天消息, void, "?fireEventPlayerMessage@MinecraftEventing@@AEAAXAEBV?$bas
 	);
 	original(_this, sender, target, msg, style);
 }
-THook(玩家输入文本, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVTextPacket@@@Z",
+Hook(玩家输入文本, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVTextPacket@@@Z",
 	VA _this, VA id, /*(TextPacket*)*/VA tp) {
 	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
-		_this, id, *((char*)tp + 16));
+		_this, id, f(char, tp + 16));
 	if (p) {
-		string msg = *(string*)(tp + 80);
-		CALLPYFUNCTION(u8"输入文本", "{s:K,s:s}",
+		string msg = f(string, tp + 80);
+		CALL_PY_FUNCTION(u8"输入文本", "{s:K,s:s}",
 			"player", p,
 			"msg", msg.c_str()
 		);
 		if (res)original(_this, id, tp);
 	}
 }
-THook(玩家输入指令, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVCommandRequestPacket@@@Z",
+Hook(玩家输入指令, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVCommandRequestPacket@@@Z",
 	VA _this, VA id, /*(CommandRequestPacket*)*/VA crp) {
 	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
-		_this, id, *((char*)crp + 16));
+		_this, id, f(char, crp + 16));
 	if (p) {
 		string cmd = f(string, crp + 40);
-		CALLPYFUNCTION(u8"输入指令", "{s:K,s:s}",
+		CALL_PY_FUNCTION(u8"输入指令", "{s:K,s:s}",
 			"player", p,
 			"cmd", cmd.c_str()
 		);
 		if (res)original(_this, id, crp);
 	}
 }
-THook(玩家选择表单, void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormResponsePacket@@$0A@@@UEBAXAEBVNetworkIdentifier@@AEAVNetEventCallback@@AEAV?$shared_ptr@VPacket@@@std@@@Z",
+Hook(玩家选择表单, void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormResponsePacket@@$0A@@@UEBAXAEBVNetworkIdentifier@@AEAVNetEventCallback@@AEAV?$shared_ptr@VPacket@@@std@@@Z",
 	VA _this, VA id, VA handle,/*(ModalFormResponsePacket**)*/VA* fp) {
 	VA fmp = *fp;
 	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
@@ -689,17 +686,19 @@ THook(玩家选择表单, void, "?handle@?$PacketHandlerDispatcherInstance@VModalFormR
 	if (PlayerCheck(p)) {
 		unsigned fid = f(unsigned, fmp + 40);
 		string data = f(string, fmp + 48);
-		VA len = data.length()-1;
-		if (data[len] == '\n')data[len] = '\0';
-		CALLPYFUNCTION(u8"选择表单", "{s:K,s:s,s:i}",
-			"player", p,
-			"selected", data.c_str(),
-			"formid", fid
-		);
+		if (data != "null\n") {
+			VA len = data.length() - 1;
+			if (data[len] == '\n')data[len] = '\0';
+			CALL_PY_FUNCTION(u8"选择表单", "{s:K,s:s,s:i}",
+				"player", p,
+				"selected", data.c_str(),
+				"formid", fid
+			);
+		}
 	}
 	original(_this, id, handle, fp);
 }
-THook(更新命令方块, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVCommandBlockUpdatePacket@@@Z",
+Hook(更新命令方块, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVCommandBlockUpdatePacket@@@Z",
 	VA _this, VA id, /*(CommandBlockUpdatePacket*)*/VA cbp) {
 	Player* p = SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
 		_this, id, *((char*)cbp + 16));
@@ -712,7 +711,7 @@ THook(更新命令方块, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentif
 		auto output = f(string, cbp + 96);
 		auto rawname = f(string, cbp + 128);
 		auto delay = f(int, cbp + 160);
-		CALLPYFUNCTION(u8"命令方块更新", "{s:K,s:i,s:i,s:i,s:s,s:s,s:s,s:i,s:[i,i,i]}",
+		CALL_PY_FUNCTION(u8"命令方块更新", "{s:K,s:i,s:i,s:i,s:s,s:s,s:s,s:i,s:[i,i,i]}",
 			"player", p,
 			"mode", mode,
 			"condition", condition,
@@ -726,17 +725,17 @@ THook(更新命令方块, void, "?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentif
 		if (res)original(_this, id, cbp);
 	}
 }
-THook(爆炸监听, bool, "?explode@Level@@QEAAXAEAVBlockSource@@PEAVActor@@AEBVVec3@@M_N3M3@Z",
+Hook(爆炸监听, bool, "?explode@Level@@QEAAXAEAVBlockSource@@PEAVActor@@AEBVVec3@@M_N3M3@Z",
 	Level* _this, BlockSource* bs, Actor* a3, const Vec3 pos, float a5, bool a6, bool a7, float a8, bool a9) {
-	CALLPYFUNCTION(u8"爆炸监听", "{s:K,s:[f,f,f],s:i,s:i}",
-		"actor",a3,
+	CALL_PY_FUNCTION(u8"爆炸监听", "{s:K,s:[f,f,f],s:i,s:i}",
+		"actor", a3,
 		"position", pos.x, pos.y, pos.z,
 		"dimensionid", bs->getDimensionId(),
 		"power", a5
 	);
 	RET(_this, bs, a3, pos, a5, a6, a7, a8, a9);
 }
-THook(命令方块执行, bool, "?performCommand@CommandBlockActor@@QEAA_NAEAVBlockSource@@@Z",
+Hook(命令方块执行, bool, "?performCommand@CommandBlockActor@@QEAA_NAEAVBlockSource@@@Z",
 	VA _this, BlockSource* a2) {
 	//脉冲:0,重复:1,链:2
 	int mode = SYMCALL<int>("?getMode@CommandBlockActor@@QEBA?AW4CommandBlockMode@@AEAVBlockSource@@@Z",
@@ -747,7 +746,7 @@ THook(命令方块执行, bool, "?performCommand@CommandBlockActor@@QEAA_NAEAVBlockSou
 	string cmd = f(string, _this + 264);
 	string rawname = f(string, _this + 296);
 	BlockPos bp = f(BlockPos, _this + 44);
-	CALLPYFUNCTION(u8"命令方块执行", "{s:s,s:s,s:[i,i,i],s:i,s:i}",
+	CALL_PY_FUNCTION(u8"命令方块执行", "{s:s,s:s,s:[i,i,i],s:i,s:i}",
 		"cmd", cmd.c_str(),
 		"rawname", rawname.c_str(),
 		"position", bp.x, bp.y, bp.z,
@@ -756,14 +755,27 @@ THook(命令方块执行, bool, "?performCommand@CommandBlockActor@@QEAA_NAEAVBlockSou
 	);
 	RET(_this, a2);
 }
+Hook(玩家穿戴, void, "?setArmor@Player@@UEAAXW4ArmorSlot@@AEBVItemStack@@@Z",
+	Player* p, unsigned slot, ItemStack* i) {
+	if (i == GetServerSymbol("?EMPTY_ITEM@ItemStack@@2V1@B"))return;
+	CALL_PY_FUNCTION(u8"穿戴盔甲", "{s:K,s:i,s:i,s:s,s:i,s:i}",
+		"player", p,
+		"itemid", i->getId(),
+		"itemcount", i->getStackSize(),
+		"itemname", i->getName().c_str(),
+		"itemaux", i->getAuxValue(),
+		"slot", slot
+	);
+	if (res)original(p, slot, i);
+}
 #pragma endregion
 void init() {
-	puts("BDSpyrunner v0.0.8 for BDS 1.16.200 Loading...");
+	puts("BDSpyrunner v0.0.9 for BDS 1.16.200 Loading...");
 	PyPreConfig cfg;
-	PyPreConfig_InitPythonConfig(&cfg);
+	//PyPreConfig_InitPythonConfig(&cfg);
+	PyPreConfig_InitIsolatedConfig(&cfg);
 	Py_PreInitialize(&cfg);
-	PyObject* (*initfunc)(void) = [] {return PyModule_Create(&mc); };
-	PyImport_AppendInittab("mc", initfunc); //增加一个模块
+	PyImport_AppendInittab("mc", mc_init); //增加一个模块
 	Py_Initialize();
 	_finddata_t fileinfo;//用于查找的句柄
 	long long handle = _findfirst("./py/*.py", &fileinfo);
@@ -777,6 +789,6 @@ void init() {
 	}
 	else puts("can't find py directory");
 }
-BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved){
-	if (dwReason == 1)init();return 1;
+BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved) {
+	if (dwReason == 1)init(); return 1;
 }

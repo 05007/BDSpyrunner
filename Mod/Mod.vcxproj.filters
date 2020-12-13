@@ -4,12 +4,7 @@
     <ClCompile Include="mod.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Library Include="python39.lib" />
     <Library Include="chakra.lib" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="BDS.hpp" />
-    <ClInclude Include="pch.h" />
-    <ClInclude Include="bdxcore.h" />
+    <Library Include="python39.lib" />
   </ItemGroup>
 </Project>

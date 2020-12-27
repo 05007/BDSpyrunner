@@ -5,6 +5,7 @@
 #include <thread>
 #include <vector>
 #include <unordered_map>
+#include "json/json.h"
 #include "include/Python.h"
 #define f(type, ptr) (*(type*)(ptr))
 #define SYMAS(ret, fn, ...) ((ret(*)(__VA_ARGS__))GetServerSymbol(fn))

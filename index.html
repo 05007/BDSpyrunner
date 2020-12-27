@@ -73,6 +73,22 @@
   </span>
   [例] setBeforeActListener(<span class="string">'聊天消息'</span>, func)
 
+  <p>setShareData</p>
+  <span class="comment">
+   功能：设置共享数据<br/>
+   参数类型：字符串 任意<br/>
+   参数详解：index - 索引 data - 数据<br/>
+  </span>
+  [例] setShareData(<span class="string">'数据'</span>, 1)
+
+  <p>getShareData</p>
+  <span class="comment">
+   功能：获取共享数据<br/>
+   参数类型：字符串<br/>
+   参数详解：index - 索引<br/>
+  </span>
+  [例] getShareData(<span class="string">'数据'</span>)
+
   <p>setCommandDescription</p>
   <span class="comment">
    功能：设置一个全局指令说明<br/>
@@ -95,8 +111,9 @@
    功能：向指定的玩家发送一个简单表单<br/>
    参数类型：整数 字符串 字符串 字符串<br/>
    参数详解：player - 玩家指针 title - 表单标题 content - 内容 buttons - 按钮文本数组字符串<br/>
-   返回值：创建的表单id 为 0 表示发送失败
-  </span><br/>
+   返回值：创建的表单id 为 0 表示发送失败<br/>
+  </span>
+
   [例] sendSimpleForm(player, <span class="string">'致命选项'</span>, <span class="string">'请选择：'</span>, <span class="string">'[{"text":"生存"},{"text":"死亡"},{"text":"求助"}]'</span>)
 
   <p>sendModalForm</p>
@@ -105,8 +122,9 @@
    参数类型：整数 字符串 字符串 字符串 字符串<br/>
    参数详解：player - 玩家指针 title - 表单标题 content - 内容 button1 按钮1标题（点击该按钮selected为true） button2
    按钮2标题（点击该按钮selected为false）<br/>
-   返回值：创建的表单id 为 0 表示发送失败
-  </span><br/>
+   返回值：创建的表单id 为 0 表示发送失败<br/>
+  </span>
+
   [例] sendModalForm(player, <span class="string">'没有第三个选项'</span>, <span class="string">'请选择：'</span>, <span class="string">'生存'</span>, <span class="string">'死亡'</span>)
 
   <p>sendCustomForm</p>
@@ -114,8 +132,9 @@
    功能：向指定的玩家发送一个自定义表单<br/>
    参数类型：整数 字符串<br/>
    参数详解：player - 玩家指针 json - 自定义表单的json字符串(要使用自定义表单类型 参考nk、pm格式或minebbs专栏)<br/>
-   返回值：创建的表单id 为 0 表示发送失败
-  </span><br/>
+   返回值：创建的表单id 为 0 表示发送失败<br/>
+  </span>
+
   [例] sendForm(player,<span class="string">'{"content":[{"type":"label","text":"这是一个文本标签"},{"placeholder":"水印文本","default":"","type":"input","text":""},{"default":true,"type":"toggle","text":"开关~或许是吧"},{"min":0.0,"max":10.0,"step":2.0,"default":3.0,"type":"slider","text":"游标滑块！？"},{"default":1,"steps":["Step1","Step2","Step 3"],"type":"step_slider","text":"矩阵滑块？!"},{"default":1,"options":["Option 1","Option2","Option3"],"type":"dropdown","text":"如你所见 下拉框"}], "type":"custom_form","title":"这是一个自定义窗体"}'</span>)
 
   <p>transferServer</p>
@@ -123,8 +142,9 @@
    功能：传送玩家至指定服务器<br/>
    参数类型：整数 字符串 整数<br/>
    参数详解：player - 玩家指针 address - 待传服务器 port - 端口<br/>
-   返回值：是否传送成功
-  </span><br/>
+   返回值：是否传送成功<br/>
+  </span>
+
   [例] transferServer(player,<span class="string">'www.xiafox.com'</span>, 19132)
 
   <p>getSlectedItem</p>
@@ -133,7 +153,7 @@
    参数类型：整数<br/>
    参数详解：player - 玩家指针<br/>
    返回值：物品信息字典<br/>
-  </span><br/>
+  </span>
   [例] getSlectedItem(player)
 
   <p>getPlayerInfo</p>
@@ -141,17 +161,18 @@
    功能：查询在线玩家基本信息<br/>
    参数类型：字符串<br/>
    参数详解：player - 玩家指针<br/>
-   返回值：玩家基本信息字典
-  </span><br/>
-  [例] getPlayerInfo(player)<br/><br/>
-  注:此函数还有一个版本getActorInfo 用于获取生物数据 不进行玩家检查
+   返回值：玩家基本信息字典<br/>
+  </span>
+  [例] getPlayerInfo(player)<br/>
+  注:此函数还有一个版本getActorInfo 用于获取生物数据 不进行玩家检查<br/>
   
   <p>getPlayerPerm</p>
   <span class="comment">
    功能：获取玩家权限<br/>
    参数类型：整数<br/>
    参数详解：player - 玩家指针<br/>
-  </span><br/>
+  </span>
+
   [例] getPlayerPerm(player)
 
   <p>setPlayerPerm</p>
@@ -159,7 +180,8 @@
    功能：设置玩家权限<br/>
    参数类型：整数 整数<br/>
    参数详解：player - 玩家指针 perm - 权限等级<br/>
-  </span><br/>
+  </span>
+
   [例] setPlayerPerm(player,1)
 
   <p>addLevel</p>
@@ -168,7 +190,8 @@
    参数类型：整数 整数<br/>
    参数详解：player - 玩家指针 lv - 等级<br/>
    返回值：物品信息字典<br/>
-  </span><br/>
+  </span>
+
   [例] addLevel(player,1)
 
   <p>setName</p>
@@ -177,8 +200,9 @@
    参数类型：整数 字符串<br/>
    参数详解：player - 玩家指针 newName - 新的名称<br/>
    返回值：是否命名成功<br/>
-   备注：该函数可能不会变更客户端实际显示名
-  </span><br/>
+   备注：该函数可能不会变更客户端实际显示名<br/>
+  </span>
+
   [例] setName(player,<span class="string">'名字'</span>)
 
   <p>getPlayerScore</p>
@@ -187,7 +211,8 @@
    参数类型：整数 字符串<br/>
    参数详解：player - 玩家指针 objname - 计分板名称<br/>
    返回值：分数<br/>
-  </span><br/>
+  </span>
+
   [例] getPlayerScore(player,<span class="string">'test'</span>)
 
   <p>modifyPlayerScore</p>
@@ -196,7 +221,8 @@
    参数类型：整数 字符串 整数 整数<br/>
    参数详解：player - 玩家指针 objname - 计分板名称 count - 分数量 mode - 修改模式{set,add,remove}(对应0,1,2)(<br/>
    返回值：分数<br/>
-  </span><br/>
+  </span>
+
   [例] modifyPlayerScore(player,<span class="string">'test'</span>,2,1)
 
   <p>talkAs</p>
@@ -204,8 +230,9 @@
    功能：模拟玩家发送一个文本<br/>
    参数类型：整数 字符串<br/>
    参数详解：player - 玩家指针 msg - 待模拟发送的文本<br/>
-   返回值：是否发送成功
-  </span><br/>
+   返回值：是否发送成功<br/>
+  </span>
+
   [例] talkAs(player,<span class="string">'pyr!'</span>)
 
   <p>runcmdAs</p>
@@ -213,8 +240,9 @@
    功能：模拟玩家执行一个指令<br/>
    参数类型：整数 字符串<br/>
    参数详解：player - 玩家指针 cmd - 待模拟执行的指令<br/>
-   返回值：是否发送成功
-  </span><br/>
+   返回值：是否发送成功<br/>
+  </span>
+
   [例] runcmdAs(player,<span class="string">'/me pyr!'</span>)
 
   <p>teleport</p>
@@ -222,8 +250,9 @@
    功能：传送玩家至指定坐标和维度<br/>
    参数类型：整数 浮点数 浮点数 浮点数 整数<br/>
    参数详解：player - 玩家指针 X - x Y - y Z - z dimensionid - 维度ID<br/>
-   返回值：是否传送成功
-  </span><br/>
+   返回值：是否传送成功<br/>
+  </span>
+
   [例] teleport(player, 10, 99, 10, 2)
 
   <p>tellraw</p>
@@ -231,8 +260,9 @@
    功能：向玩家发送一个原始文本<br/>
    参数类型：整数 字符串<br/>
    参数详解：player - 玩家指针 msg - 待发送的文本<br/>
-   返回值：是否发送成功
-  </span><br/>
+   返回值：是否发送成功<br/>
+  </span>
+
   [例] tellraw(player,<span class="string">'pyr!'</span>)
 
   <p>addItem</p>
@@ -241,8 +271,9 @@
    参数类型：整数 整数 整数 整数<br/>
    参数详解：player - 玩家指针 id - 物品id值 aux - 物品特殊值 count - 数量<br/>
    返回值：是否增加成功<br/>
-   备注：特定条件下可能不会变更游戏内实际物品
-  </span><br/>
+   备注：特定条件下可能不会变更游戏内实际物品<br/>
+  </span>
+
   [例] addItem(player, 9, 0, 32)
 
   <p>setPlayerBossBar</p>
@@ -250,8 +281,9 @@
    功能：设置玩家自定义血条<br/>
    参数类型：整数 字符串 浮点数<br/>
    参数详解：player - 玩家指针 title - 血条标题 percent - 血条百分比<br/>
-   返回值：是否设置成功
-  </span><br/>
+   返回值：是否设置成功<br/>
+  </span>
+
   [例] setPlayerBossBar(player,<span class="string">'标题'</span>, 1.00)
 
   <p>removePlayerBossBar</p>
@@ -259,8 +291,9 @@
    功能：清除玩家自定义血条<br/>
    参数类型：整数<br/>
    参数详解：player - 玩家指针<br/>
-   返回值：是否清除成功
-  </span><br/>
+   返回值：是否清除成功<br/>
+  </span>
+
   [例] removePlayerBossBar(player)
 
   <p>setPlayerSidebar(敬请期待)</p>
@@ -454,7 +487,7 @@
   <span class="string">player</span> - 玩家指针<br/>
 
   <p class="listen">(23)离开游戏</p>
-  拦截可否：是<br/>
+  拦截可否：否<br/>
   回传数据：<br/>
   <span class="string">player</span> - 玩家指针<br/>
 

@@ -97,6 +97,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="jsoncpp.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">json/json.h</PrecompiledHeaderFile>
+    </ClCompile>
     <ClCompile Include="mod.cpp" />
   </ItemGroup>
   <ItemGroup>

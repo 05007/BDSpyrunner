@@ -18,9 +18,7 @@ struct Block {
 		return SYMCALL<BlockLegacy*>("?getLegacyBlock@Block@@QEBAAEBVBlockLegacy@@XZ", this);
 	}
 };
-struct BlockPos {
-	int x = 0, y = 0, z = 0;
-};
+struct BlockPos { int x = 0, y = 0, z = 0; };
 struct BlockActor {
 	Block* getBlock() {
 		return f(Block*, this + 16);
@@ -53,10 +51,10 @@ struct ItemStackBase {
 	short mAuxValue;
 	char mCount;
 	char mValid;
-	char unk[4]{};
+	char unk[4];
 	VA mPickupTime;
 	char mShowPickUp;
-	char unk2[7]{};
+	char unk2[7];
 	vector<VA*> mCanPlaceOn;
 	VA mCanPlaceOnHash;
 	vector<VA*> mCanDestroy;

@@ -1,5 +1,6 @@
 #pragma once
 #include "pch.h"
+#include "string_span.h"
 using namespace std;
 struct BlockLegacy {
 	string getBlockName() {
@@ -42,6 +43,80 @@ struct Level {};
 struct Vec3 { float x = 0.0f, y = 0.0f, z = 0.0f; };
 struct Vec2 { float x = 0.0f, y = 0.0f; };
 struct MobEffectInstance { char fill[0x1C]; };
+
+struct Tag {
+	enum Type {
+		End, Byte, Short, Int, Int64, Float,
+		Double, ByteArray, String, List, Compound,
+	};
+	//占位虚函数表
+	virtual void fill() {}
+	//构建新Tag
+	Tag* newTag(Type t) {
+		return SYMCALL<Tag*>("?newTag@Tag@@SA?AV?$unique_ptr@VTag@@U?$default_delete@VTag@@@std@@@std@@W4Type@1@@Z",
+			this, t);
+	}
+};
+struct IntTag : Tag {
+	int value;
+	IntTag(){}
+	IntTag(int i) :value(i) {}
+};
+struct StringTag : Tag {
+	string value;
+	StringTag(){}
+	StringTag(const char* str) :value(str) {}
+};
+struct ListTag : Tag {
+	vector<Tag*> value;
+	ListTag(){}
+};
+struct CompoundTag : Tag {
+	using CompoundTagVariant = variant<IntTag, StringTag, ListTag, CompoundTag>;
+	map<string, CompoundTagVariant> value;
+
+	CompoundTag(){}
+	string toString() {
+		string s;
+		SYMCALL("?toString@CompoundTag@@UEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
+			this, &s);
+		return s;
+	}
+	bool Has(gsl::cstring_span<> s) {
+		return SYMCALL<bool>("?contains@CompoundTag@@QEBA_NV?$basic_string_span@$$CBD$0?0@gsl@@@Z",
+			this, s);
+	}
+	unsigned char getByte(gsl::cstring_span<> s) {
+		return SYMCALL<unsigned char>("?getByte@CompoundTag@@QEBAEV?$basic_string_span@$$CBD$0?0@gsl@@@Z",
+			this, s);
+	}
+	int getInt(gsl::cstring_span<> s) {
+		return SYMCALL<int>("?getInt@CompoundTag@@QEBAHV?$basic_string_span@$$CBD$0?0@gsl@@@Z",
+			this, s);
+	}
+	string getString(gsl::cstring_span<> s) {
+		return *SYMCALL<string*>("?getString@CompoundTag@@QEBAAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$basic_string_span@$$CBD$0?0@gsl@@@Z",
+			this, s);
+	}
+	ListTag* getList(gsl::cstring_span<> s) {
+		return SYMCALL<ListTag*>("?getList@CompoundTag@@QEAAPEAVListTag@@V?$basic_string_span@$$CBD$0?0@gsl@@@Z",
+			this, s);
+	}
+	CompoundTag* getCompound(gsl::cstring_span<> s) {
+		return SYMCALL<CompoundTag*>("?getCompound@CompoundTag@@QEAAPEAV1@V?$basic_string_span@$$CBD$0?0@gsl@@@Z",
+			this, s);
+	}
+};
+
+struct EnchantmentInstance {
+	int type;
+	int level;
+};
+struct ItemEnchants {
+	int slot;
+	std::vector<EnchantmentInstance> list[3];
+};
+
 struct Item;
 struct ItemStackBase {
 	VA vtable;
@@ -85,24 +160,30 @@ struct ItemStackBase {
 	bool isNull() {
 		return SYMCALL<bool>("?isNull@ItemStackBase@@QEBA_NXZ", this);
 	}
-	VA getNetworkUserData() {
-		VA a;
-		return SYMCALL<VA>("?getNetworkUserData@ItemStackBase@@QEBA?AV?$unique_ptr@VCompoundTag@@U?$default_delete@VCompoundTag@@@std@@@std@@XZ",
-			this, &a);
+	CompoundTag* getNetworkUserData() {
+		CompoundTag* ct;
+		SYMCALL("?getNetworkUserData@ItemStackBase@@QEBA?AV?$unique_ptr@VCompoundTag@@U?$default_delete@VCompoundTag@@@std@@@std@@XZ",
+			this, &ct);
+		return ct;
 	}
-	VA save() {
-		VA cp;
-		return SYMCALL<VA>("?save@ItemStackBase@@QEBA?AV?$unique_ptr@VCompoundTag@@U?$default_delete@VCompoundTag@@@std@@@std@@XZ",
-			this, &cp);
+	CompoundTag* save() {
+		CompoundTag* ct;
+		SYMCALL("?save@ItemStackBase@@QEBA?AV?$unique_ptr@VCompoundTag@@U?$default_delete@VCompoundTag@@@std@@@std@@XZ",
+			this, &ct);
+		return ct;
 	}
 	bool isEmptyStack() {
 		return f(char, this + 34) == 0;
 	}
-	void fromTag(VA t) {
-		SYMCALL<VA>("?fromTag@ItemStack@@SA?AV1@AEBVCompoundTag@@@Z", this, t);
+	ItemStackBase* _loadItem(CompoundTag* t) {
+		return SYMCALL<ItemStackBase*>("?_loadItem@ItemStackBase@@AEAAXAEBVCompoundTag@@@Z ", this, t);
+	}
+	ItemStackBase* fromTag(CompoundTag* t) {
+		return SYMCALL<ItemStackBase*>("?fromTag@ItemStack@@SA?AV1@AEBVCompoundTag@@@Z",
+			this, t);
 	}
 	bool getFromId(short id, short aux, char count) {
-		memcpy(this, GetServerSymbol("?EMPTY_ITEM@ItemStack@@2V1@B"), 0x90);
+		memcpy(this, SYM("?EMPTY_ITEM@ItemStack@@2V1@B"), 0x90);
 		bool ret = SYMCALL<bool>("?_setItem@ItemStackBase@@IEAA_NH@Z", this, id);
 		mCount = count;
 		mAuxValue = aux;
@@ -113,7 +194,6 @@ struct ItemStackBase {
 		return SYMCALL<Item*>("?getItem@ItemStackBase@@QEBAPEBVItem@@XZ", this);
 	}
 };
-static_assert(sizeof(ItemStackBase) == 0x90);
 struct ItemStack : ItemStackBase {};
 struct Container {
 	// 获取容器内所有物品
@@ -167,22 +247,26 @@ struct Actor {
 	VA updateAttrs() {
 		return SYMCALL<VA>("?_sendDirtyActorData@Actor@@QEAAXXZ", this);
 	}
+	VA getAttribute() {
+		return f(VA, this + 1144);
+	}
 	// 添加一个状态
 	VA addEffect(VA ef) {
 		return SYMCALL<VA>("?addEffect@Actor@@QEAAXAEBVMobEffectInstance@@@Z", this, ef);
 	}
 	// 获取生命值
-	pair<float, float> getHealth() {
-		VA hattr = SYMCALL<VA>("?getMutableInstance@BaseAttributeMap@@QEAAPEAVAttributeInstance@@I@Z",// IDA ScriptHealthComponent::applyComponentTo line 30 132 180
-			f(VA, this + 1144), f(unsigned, (VA)GetServerSymbol("?HEALTH@SharedAttributes@@2VAttribute@@B") + 4));
-		return { f(float, hattr + 132), f(float, hattr + 128) };
+	float getHealth() {
+		return *SYMCALL<float*>("?getHealth@Actor@@QEBAHXZ", this);
 	}
-	void setHealth(float& value, float& max) {
-		VA hattr = SYMCALL<VA>("?getMutableInstance@BaseAttributeMap@@QEAAPEAVAttributeInstance@@I@Z",// IDA ScriptHealthComponent::applyComponentTo line 30 132 180
-			f(VA, this + 1144), f(unsigned, (VA)GetServerSymbol("?HEALTH@SharedAttributes@@2VAttribute@@B") + 4));
+	float getMaxHealth() {
+		return *SYMCALL<float*>("?getMaxHealth@Actor@@QEBAHXZ", this);
+	}
+	void setHealth(float value, float max) {
+		VA hattr = ((*(VA(__fastcall**)(Actor*, void*))(*(VA*)this + 1552))(
+			this, SYM("?HEALTH@SharedAttributes@@2VAttribute@@B")));
 		f(float, hattr + 132) = value;
 		f(float, hattr + 128) = max;
-		SYMCALL("?_setDirty@AttributeInstance@@AEAAXXZ", hattr);
+		//SYMCALL("?_setDirty@AttributeInstance@@AEAAXXZ", hattr);
 	}
 };
 struct Mob : Actor {
@@ -295,7 +379,7 @@ struct Player : Mob {
 	//传送
 	void teleport(Vec3 target, int dim) {
 		SYMCALL("?teleport@TeleportCommand@@SAXAEAVActor@@VVec3@@PEAV3@V?$AutomaticID@VDimension@@H@@VRelativeFloat@@4HAEBUActorUniqueID@@@Z",
-			this, target, 0, dim, 0, 0, 0, GetServerSymbol("?INVALID_ID@ActorUniqueID@@2U1@B"));
+			this, target, 0, dim, 0, 0, 0, SYM("?INVALID_ID@ActorUniqueID@@2U1@B"));
 	}
 };
 struct ScoreboardId {};

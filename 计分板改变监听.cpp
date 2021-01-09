@@ -33,6 +33,9 @@ struct Objective {
 		char a1[12];
 		return SYMCALL(ScoreInfo*, MSSYM_B1QE14getPlayerScoreB1AA9ObjectiveB2AAA4QEBAB1QE11AUScoreInfoB2AAE16AEBUScoreboardIdB3AAAA1Z, this, a1, a2);
 	}
+	auto createScoreboardId(Player *player) {
+		return SYMCALL(ScoreboardId*, MSSYM_B1QE18createScoreboardIdB1AE16ServerScoreboardB2AAE20UEAAAEBUScoreboardIdB2AAE10AEBVPlayerB3AAAA1Z, this, player);
+	}
 };
 
 //==============================================辅助加载============================================================================================
@@ -50,6 +53,10 @@ THook(void, MSSYM_B1QE14onPlayerJoinedB1AE16ServerScoreboardB2AAE15UEAAXAEBVPlay
 	//在玩家加入时存储玩家指针，方便通过计分板id获取玩家指针
 	//如需玩家离开时删除，请自行编写
 	int playersocreboardid = scoreboard->getScoreboardID(player)->id;
+	if (playersocreboardid==-1) {
+		scoreboard->createScoreboardId(player);
+		playersocreboardid = scoreboard->getScoreboardID(player)->id;
+	}
 	player_socreboardid[playersocreboardid] = player;
 	original(class_this, player);
 }

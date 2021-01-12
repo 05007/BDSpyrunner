@@ -414,6 +414,28 @@ api_function(removeBossBar) {
 	}
 	return Py_False;
 }
+//通过玩家指针获取计分板id
+api_function(getScoreBoardId) {
+	Player* player;
+	if (PyArg_ParseTuple(args, "K:getScoreBoardId", &player)) {
+		if (PlayerCheck(player)) {
+			return PyLong_FromLong(_scoreboard->getScoreboardId(player)->id);
+		}
+	}
+	return Py_False;
+}
+//通过玩家指针创建计分板id
+api_function(createScoreBoardId)
+{
+	Player* player;
+	if (PyArg_ParseTuple(args, "K:createScoreBoardId", &player)) {
+		if (PlayerCheck(player)) {
+			_scoreboard->createScoreBoardId(player);
+			return Py_True;
+		}
+	}
+	return Py_False;
+}
 // 方法列表
 PyMethodDef api_list[] = {
 api_method(logout),
@@ -444,6 +466,8 @@ api_method(tellraw),
 api_method(addItem),
 api_method(setBossBar),
 api_method(removeBossBar),
+api_method(getScoreBoardId),
+api_method(createScoreBoardId),
 {}
 };
 // 模块声明
@@ -835,4 +859,28 @@ int DllMain(VA, int dwReason, VA) {
 		puts("[BDSpyrunner] v0.0.12 for BDS1.16.201 loaded.");
 		puts("[BDSpyrunner] compilation time : " __TIME__ " " __DATE__);
 	} return 1;
+}
+
+
+Hook(计分板改变, void, "?onScoreChanged@ServerScoreboard@@UEAAXAEBUScoreboardId@@AEBVObjective@@@Z", const struct Scoreboard* class_this, ScoreboardId* a2, Objective* a3)
+{
+	/*
+	原命令：
+	创建计分板时：/scoreboard objectives <add|remove> <objectivename> dummy <objectivedisplayname>
+	修改计分板时（此函数hook此处)：/scoreboard players <add|remove|set> <playersname> <objectivename> <playersnum>
+	*/
+	int scoreboardid = a2->id;
+	callpy(u8"计分板改变", Py_BuildValue("{s:i,s:i,s:i,s:i}",
+		"scoreboardid", scoreboardid,
+		"playersnum", a3->getPlayerScore(a2)->getCount(),
+		"objectivename", a3->getscorename(),
+		"objectivedisname", a3->getscoredisplayname()
+	));
+	/*
+	cout << to_string(scoreboardid) << endl;//获取计分板id
+	cout << to_string(a3->getPlayerScore(a2)->getCount()) << endl;//获取修改后的<playersnum>
+	cout << a3->getscorename() << endl;//获取<objectivename>
+	cout << a3->getscoredisplayname() << endl;//获取<objectivedisname>
+	*/
+	original(class_this, a2, a3);
 }

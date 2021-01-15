@@ -59,23 +59,23 @@ struct Tag {
 };
 struct IntTag : Tag {
 	int value;
-	IntTag(){}
+	IntTag() {}
 	IntTag(int i) :value(i) {}
 };
 struct StringTag : Tag {
 	string value;
-	StringTag(){}
+	StringTag() {}
 	StringTag(const char* str) :value(str) {}
 };
 struct ListTag : Tag {
 	vector<Tag*> value;
-	ListTag(){}
+	ListTag() {}
 };
 struct CompoundTag : Tag {
 	using CompoundTagVariant = variant<IntTag, StringTag, ListTag, CompoundTag>;
 	map<string, CompoundTagVariant> value;
 
-	CompoundTag(){}
+	CompoundTag() {}
 	string toString() {
 		string s;
 		SYMCALL("?toString@CompoundTag@@UEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
@@ -148,7 +148,7 @@ struct ItemStackBase {
 	// 取物品名称
 	string getName() {
 		string str;
-		SYMCALL<string*>("?getName@ItemStackBase@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
+		SYMCALL<string*>("?getRawNameId@ItemStackBase@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
 			this, &str);
 		return str;
 	}
@@ -255,11 +255,11 @@ struct Actor {
 		return SYMCALL<VA>("?addEffect@Actor@@QEAAXAEBVMobEffectInstance@@@Z", this, ef);
 	}
 	// 获取生命值
-	float getHealth() {
-		return *SYMCALL<float*>("?getHealth@Actor@@QEBAHXZ", this);
+	int getHealth() {
+		return SYMCALL<int>("?getHealth@Actor@@QEBAHXZ", this);
 	}
-	float getMaxHealth() {
-		return *SYMCALL<float*>("?getMaxHealth@Actor@@QEBAHXZ", this);
+	int getMaxHealth() {
+		return SYMCALL<int>("?getMaxHealth@Actor@@QEBAHXZ", this);
 	}
 	void setHealth(float value, float max) {
 		VA hattr = ((*(VA(__fastcall**)(Actor*, void*))(*(VA*)this + 1552))(
@@ -306,9 +306,9 @@ struct Player : Mob {
 			this, pkt);
 	}
 	// 根据地图信息获取玩家xuid
-	string& getXuid(Level* level) {
+	string& getXuid() {
 		return SYMCALL<string&>("?getPlayerXUID@Level@@QEBAAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBVUUID@mce@@@Z",
-			level, this + 2720);
+			getLevel(), this + 2824);
 	}
 	// 重设服务器玩家名
 	void setName(string name) {
@@ -353,6 +353,10 @@ struct Player : Mob {
 	ItemStack* getSelectedItem() {
 		return SYMCALL<ItemStack*>("?getSelectedItem@Player@@QEBAAEBVItemStack@@XZ", this);
 	}
+	// 获取背包物品
+	ItemStack* getInventoryItem(int slot) {
+		return SYMCALL<ItemStack*>("?getItem@FillingContainer@@UEBAAEBVItemStack@@H@Z", *(__int64**)(*((__int64*)this + 0x17D) + 0xB0), slot);
+	}
 	// 获取游戏时命令权限
 	char getPermission() {// IDA ServerPlayer::setPermissions 17
 		return *f(char*, this + 2216);
@@ -382,7 +386,7 @@ struct Player : Mob {
 			this, target, 0, dim, 0, 0, 0, SYM("?INVALID_ID@ActorUniqueID@@2U1@B"));
 	}
 };
-struct ScoreboardId {};
+struct ScoreboardId;
 struct PlayerScore {
 	VA getscore() {
 		return f(VA, this + 4);
@@ -397,7 +401,23 @@ struct ScoreInfo {
 		return f(int, this + 12);
 	}
 };
+
+struct ScoreboardId {
+	int id;
+};
 struct Objective {
+	//从objective::objective得到
+	//获取计分板名称
+	auto getscorename() {
+		return *(std::string*)((VA)(this) + 64);
+	}
+	//获取计分板展示名称
+	auto getscoredisplayname() {
+		return *(std::string*)((VA)(this) + 96);
+	}
+	auto createScoreboardId(Player* player) {
+		return SYMCALL<ScoreboardId*>("?createScoreboardId@ServerScoreboard@@UEAAAEBUScoreboardId@@AEBVPlayer@@@Z", this, player);
+	}
 	ScoreInfo* getPlayerScore(ScoreboardId* a2) {
 		char a1[12];
 		return SYMCALL<ScoreInfo*>("?getPlayerScore@Objective@@QEBA?AUScoreInfo@@AEBUScoreboardId@@@Z",
@@ -428,5 +448,8 @@ struct Scoreboard {
 		bool a2 = true;
 		return SYMCALL<int>("?modifyPlayerScore@Scoreboard@@QEAAHAEA_NAEBUScoreboardId@@AEAVObjective@@HW4PlayerScoreSetFunction@@@Z",
 			this, &a2, a3, a4, count, mode);
+	}
+	auto createScoreBoardId(Player* player) {
+		return SYMCALL<ScoreboardId*>("?createScoreboardId@ServerScoreboard@@UEAAAEBUScoreboardId@@AEBVPlayer@@@Z", this, player);
 	}
 };

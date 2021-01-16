@@ -444,7 +444,7 @@ struct Scoreboard {
 		return SYMCALL<ScoreboardId*>("?getScoreboardId@Scoreboard@@QEBAAEBUScoreboardId@@AEBVActor@@@Z", this, a2);
 	}
 	//更改玩家分数
-	int modifyPlayerScore(ScoreboardId* a3, Objective* a4, int count, char mode) {
+	int modifyPlayerScore(ScoreboardId* a3, Objective* a4, int count, int mode) {
 		bool a2 = true;
 		return SYMCALL<int>("?modifyPlayerScore@Scoreboard@@QEAAHAEA_NAEBUScoreboardId@@AEAVObjective@@HW4PlayerScoreSetFunction@@@Z",
 			this, &a2, a3, a4, count, mode);

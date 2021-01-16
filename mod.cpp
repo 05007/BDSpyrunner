@@ -74,7 +74,9 @@ static bool CommandRequestPacket(Player* p, string cmd) {
 		VA pkt;//CommandRequestPacket
 		createPacket(&pkt, 77);
 		f(string, pkt + 40) = cmd;
-		p->sendPacket(pkt);
+		VA nid = p->getNetId();
+		SYMCALL<VA>("?handle@ServerNetworkHandler@@UEAAXAEBVNetworkIdentifier@@AEBVCommandRequestPacket@@@Z",_ServerNetworkHandle,nid, pkt);
+		//p->sendPacket(pkt);
 		return true;
 	}
 	return false;
@@ -356,7 +358,7 @@ api_function(getPlayerScore) {
 	return _PyLong_Zero;
 }
 api_function(modifyPlayerScore) {
-	Player* p; const char* obj; int count; char mode;
+	Player* p; const char* obj; int count; int mode;
 	if (PyArg_ParseTuple(args, "Ksii:modifyPlayerScore", &p, &obj, &count, &mode)) {
 		if (PlayerCheck(p)) {
 			Objective* testobj = _scoreboard->getObjective(obj);
@@ -579,7 +581,8 @@ Hook(使用物品, bool, "?useItemOn@GameMode@@UEAA_NAEAVItemStack@@AEBVBlockPos@@EA
 	BlockLegacy* bl = b->getBlockLegacy();
 	short bid = bl->getBlockItemID();
 	string bn = bl->getBlockName();
-	bool res = callpy(u8"使用物品", Py_BuildValue("{s:K,s:i,s:i,s:s,s:s,s:i,s:[i,i,i]}",
+	bool res = true;
+	res = callpy(u8"使用物品", Py_BuildValue("{s:K,s:i,s:i,s:s,s:s,s:i,s:[i,i,i]}",
 		"player", p,
 		"itemid", iid,
 		"itemaux", iaux,
@@ -588,7 +591,7 @@ Hook(使用物品, bool, "?useItemOn@GameMode@@UEAA_NAEAVItemStack@@AEBVBlockPos@@EA
 		"blockid", bid,
 		"position", bp->x, bp->y, bp->z
 	));
-	check_ret(_this, item, bp, a4, v5, b);
+	if (res!=false) { return original(_this, item, bp, a4, v5, b); }
 }
 Hook(放置方块, bool, "?mayPlace@BlockSource@@QEAA_NAEBVBlock@@AEBVBlockPos@@EPEAVActor@@_N@Z",
 	BlockSource* _this, Block* b, BlockPos* bp, unsigned __int8 a4, Actor* p, bool _bool) {
@@ -604,7 +607,7 @@ Hook(放置方块, bool, "?mayPlace@BlockSource@@QEAA_NAEBVBlock@@AEBVBlockPos@@EPEA
 			"position", bp->x, bp->y, bp->z
 		));
 	}
-	check_ret(_this, b, bp, a4, p, _bool);
+	if (res)return original(_this, b, bp, a4, p, _bool);
 	//return original(_this, b, bp, a4, p, _bool);
 }
 /*
@@ -632,7 +635,8 @@ Hook(破坏方块, bool, "?_destroyBlockInternal@GameMode@@AEAA_NAEBVBlockPos@@E@Z",
 	BlockLegacy* bl = b->getBlockLegacy();
 	short bid = bl->getBlockItemID();
 	string bn = bl->getBlockName();
-	bool res = callpy(u8"破坏方块", Py_BuildValue("{s:K,s:s,s:i,s:[i,i,i]}",
+	bool res = true;
+	res = callpy(u8"破坏方块", Py_BuildValue("{s:K,s:s,s:i,s:[i,i,i]}",
 		"player", p,
 		"blockname", bn.c_str(),
 		"blockid", bid,
@@ -861,7 +865,7 @@ Hook(命令方块执行, bool, "?performCommand@CommandBlockActor@@QEAA_NAEAVBlockSour
 }
 Hook(玩家穿戴, void, "?setArmor@Player@@UEAAXW4ArmorSlot@@AEBVItemStack@@@Z",
 	Player* p, unsigned slot, ItemStack* i) {
-	if (!i->getId())return;
+	if (!i->getId())return original(p, slot, i);
 	bool res = callpy(u8"玩家穿戴", Py_BuildValue("{s:K,s:i,s:i,s:s,s:i,s:i}",
 		"player", p,
 		"itemid", i->getId(),

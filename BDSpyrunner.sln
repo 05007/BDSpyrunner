@@ -1,24 +1,22 @@
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
-VisualStudioVersion = 16.0.30804.86
+VisualStudioVersion = 16.0.30907.101
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BDSpyrunner", "BDSpyrunner.vcxproj", "{B6DEABF7-7610-4025-A6CD-19E83386DF2D}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BDSpyrunner", "BDSpyrunner.vcxproj", "{FF3041F7-16E1-4EE1-BD6B-DA9E44F801F6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|x64 = Debug|x64
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{B6DEABF7-7610-4025-A6CD-19E83386DF2D}.Debug|x64.ActiveCfg = Debug|x64
-		{B6DEABF7-7610-4025-A6CD-19E83386DF2D}.Debug|x64.Build.0 = Debug|x64
-		{B6DEABF7-7610-4025-A6CD-19E83386DF2D}.Release|x64.ActiveCfg = Release|x64
-		{B6DEABF7-7610-4025-A6CD-19E83386DF2D}.Release|x64.Build.0 = Release|x64
+		{FF3041F7-16E1-4EE1-BD6B-DA9E44F801F6}.Release|x64.ActiveCfg = Release|x64
+		{FF3041F7-16E1-4EE1-BD6B-DA9E44F801F6}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {83C6C128-CC16-4B1A-BBCE-3BD678865B93}
+		SolutionGuid = {E2670A7D-E5F5-4E14-B429-185E5A351AC4}
 	EndGlobalSection
 EndGlobal

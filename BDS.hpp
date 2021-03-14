@@ -1,22 +1,25 @@
-#pragma once
+ï»¿#pragma once
 #include "pch.h"
-#include "string_span.h"
+#include "NBT.hpp"
 using namespace std;
+#pragma region Block
 struct BlockLegacy {
 	string getBlockName() {
 		return f(string, this + 128);
 	}
-	short getBlockItemID() {// IDA Item::beginCreativeGroup(,Block*,) 18~22
+	short getBlockItemID() {  // IDA Item::beginCreativeGroup(,Block*,) 18~22
 		short v3 = f(short, this + 328);
 		if (v3 < 0x100) {
 			return v3;
 		}
 		return (short)(255 - v3);
+		//return SYMCALL<short>("?getBlockItemId@BlockLegacy@@QEBAFXZ", this);
 	}
 };
 struct Block {
 	BlockLegacy* getBlockLegacy() {
-		return SYMCALL<BlockLegacy*>("?getLegacyBlock@Block@@QEBAAEBVBlockLegacy@@XZ", this);
+		return f(BlockLegacy*,this + 16);
+		//return SYMCALL<BlockLegacy*>("?getLegacyBlock@Block@@QEBAAEBVBlockLegacy@@XZ", this);
 	}
 };
 struct BlockPos { int x = 0, y = 0, z = 0; };
@@ -24,99 +27,41 @@ struct BlockActor {
 	Block* getBlock() {
 		return f(Block*, this + 16);
 	}
-	// È¡·½¿éÎ»ÖÃ
 	BlockPos* getPosition() {// IDA BlockActor::BlockActor 18~20
-		return f(BlockPos*, this + 44);
+		return (BlockPos*)(this + 44);
 	}
 };
 struct BlockSource {
-	Block* getBlock(BlockPos* bp) {
+	Block* getBlock(const BlockPos& bp) {
 		return SYMCALL<Block*>("?getBlock@BlockSource@@QEBAAEBVBlock@@AEBVBlockPos@@@Z",
-			this, bp);
+			this, &bp);
 	}
-	// »ñÈ¡·½¿éËù´¦Î¬¶È
+	bool setBlock(const string& name, const BlockPos& bp) {
+		return SYMCALL<bool>("?setBlock@BlockSource@@QEAA_NAEBVBlockPos@@AEBVBlock@@HPEBUActorBlockSyncMessage@@@Z",
+			this, &bp, *(Block**)GetServerSymbol(("?m" + name + "@VanillaBlocks@@3PEBVBlock@@EB").c_str()), 3, nullptr);
+	}
+	void updateNeighborsAt(const BlockPos* pos) {
+		SYMCALL("?updateNeighborsAt@BlockSource@@QEAAXAEBVBlockPos@@@Z",
+			this, pos);
+	}
 	int getDimensionId() {	// IDA Dimension::onBlockChanged 42
-		return f(int, (f(VA, this + 32) + 208));
+		return f(int, (f(VA, this + 32) + 216));
+		//return f(int, (f(VA, this + 32) + 208));
 	}
 };
-struct Level {};
-struct Vec3 { float x = 0.0f, y = 0.0f, z = 0.0f; };
-struct Vec2 { float x = 0.0f, y = 0.0f; };
-struct MobEffectInstance { char fill[0x1C]; };
-
-struct Tag {
-	enum Type {
-		End, Byte, Short, Int, Int64, Float,
-		Double, ByteArray, String, List, Compound,
-	};
-	//Õ¼Î»Ğéº¯Êı±í
-	virtual void fill() {}
-	//¹¹½¨ĞÂTag
-	Tag* newTag(Type t) {
-		return SYMCALL<Tag*>("?newTag@Tag@@SA?AV?$unique_ptr@VTag@@U?$default_delete@VTag@@@std@@@std@@W4Type@1@@Z",
-			this, t);
-	}
-};
-struct IntTag : Tag {
-	int value;
-	IntTag() {}
-	IntTag(int i) :value(i) {}
-};
-struct StringTag : Tag {
-	string value;
-	StringTag() {}
-	StringTag(const char* str) :value(str) {}
-};
-struct ListTag : Tag {
-	vector<Tag*> value;
-	ListTag() {}
-};
-struct CompoundTag : Tag {
-	using CompoundTagVariant = variant<IntTag, StringTag, ListTag, CompoundTag>;
-	map<string, CompoundTagVariant> value;
-
-	CompoundTag() {}
+#pragma endregion
+#pragma region Math
+struct Vec3 {
+	float x = 0.0f, y = 0.0f, z = 0.0f;
 	string toString() {
-		string s;
-		SYMCALL("?toString@CompoundTag@@UEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
-			this, &s);
-		return s;
-	}
-	bool Has(gsl::cstring_span<> s) {
-		return SYMCALL<bool>("?contains@CompoundTag@@QEBA_NV?$basic_string_span@$$CBD$0?0@gsl@@@Z",
-			this, s);
-	}
-	unsigned char getByte(gsl::cstring_span<> s) {
-		return SYMCALL<unsigned char>("?getByte@CompoundTag@@QEBAEV?$basic_string_span@$$CBD$0?0@gsl@@@Z",
-			this, s);
-	}
-	int getInt(gsl::cstring_span<> s) {
-		return SYMCALL<int>("?getInt@CompoundTag@@QEBAHV?$basic_string_span@$$CBD$0?0@gsl@@@Z",
-			this, s);
-	}
-	string getString(gsl::cstring_span<> s) {
-		return *SYMCALL<string*>("?getString@CompoundTag@@QEBAAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@V?$basic_string_span@$$CBD$0?0@gsl@@@Z",
-			this, s);
-	}
-	ListTag* getList(gsl::cstring_span<> s) {
-		return SYMCALL<ListTag*>("?getList@CompoundTag@@QEAAPEAVListTag@@V?$basic_string_span@$$CBD$0?0@gsl@@@Z",
-			this, s);
-	}
-	CompoundTag* getCompound(gsl::cstring_span<> s) {
-		return SYMCALL<CompoundTag*>("?getCompound@CompoundTag@@QEAAPEAV1@V?$basic_string_span@$$CBD$0?0@gsl@@@Z",
-			this, s);
+		char str[64];
+		sprintf_s(str, "(%f,%f,%f)", x, y, z);
+		return str;
 	}
 };
-
-struct EnchantmentInstance {
-	int type;
-	int level;
-};
-struct ItemEnchants {
-	int slot;
-	std::vector<EnchantmentInstance> list[3];
-};
-
+struct Vec2 { float x = 0.0f, y = 0.0f; };
+#pragma endregion
+#pragma region Item
 struct Item;
 struct ItemStackBase {
 	VA vtable;
@@ -138,47 +83,44 @@ struct ItemStackBase {
 	ItemStackBase* mChargedItem;
 	VA uk;
 
-	// È¡ÎïÆ·ID,ÌØÊâÖµ,ËğºÄ
+	// å–ç‰©å“ID,ç‰¹æ®Šå€¼,æŸè€—
 	short getId() {
 		return SYMCALL<short>("?getId@ItemStackBase@@QEBAFXZ", this);
 	}
 	short getDamageValue() {
 		return SYMCALL<short>("?getDamageValue@ItemStackBase@@QEBAFXZ", this);
 	}
-	// È¡ÎïÆ·Ãû³Æ
+	// å–ç‰©å“åç§°
 	string getName() {
 		string str;
 		SYMCALL<string*>("?getRawNameId@ItemStackBase@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
 			this, &str);
 		return str;
 	}
-	// È¡ÈİÆ÷ÄÚÊıÁ¿
-	int getStackCount() {// IDA ContainerModel::networkUpdateItem
-		return f(int, this + 34);
-	}
-	// ÅĞ¶ÏÊÇ·ñ¿ÕÈİÆ÷
+	// å–å®¹å™¨å†…æ•°é‡
+	//int getStackCount() {// IDA ContainerModel::networkUpdateItem
+	//	return f(int, this + 34);
+	//}
+	// åˆ¤æ–­æ˜¯å¦ç©ºå®¹å™¨
 	bool isNull() {
 		return SYMCALL<bool>("?isNull@ItemStackBase@@QEBA_NXZ", this);
 	}
-	CompoundTag* getNetworkUserData() {
-		CompoundTag* ct;
+	//bool isEmptyStack() {
+	//	return f(char, this + 34) == 0;
+	//}
+	Tag* getNetworkUserData() {
+		Tag* ct;
 		SYMCALL("?getNetworkUserData@ItemStackBase@@QEBA?AV?$unique_ptr@VCompoundTag@@U?$default_delete@VCompoundTag@@@std@@@std@@XZ",
 			this, &ct);
 		return ct;
 	}
-	CompoundTag* save() {
-		CompoundTag* ct;
+	Tag* save() {
+		Tag* t = 0;
 		SYMCALL("?save@ItemStackBase@@QEBA?AV?$unique_ptr@VCompoundTag@@U?$default_delete@VCompoundTag@@@std@@@std@@XZ",
-			this, &ct);
-		return ct;
+			this, &t);
+		return t;
 	}
-	bool isEmptyStack() {
-		return f(char, this + 34) == 0;
-	}
-	ItemStackBase* _loadItem(CompoundTag* t) {
-		return SYMCALL<ItemStackBase*>("?_loadItem@ItemStackBase@@AEAAXAEBVCompoundTag@@@Z ", this, t);
-	}
-	ItemStackBase* fromTag(CompoundTag* t) {
+	ItemStackBase* fromTag(Tag* t) {
 		return SYMCALL<ItemStackBase*>("?fromTag@ItemStack@@SA?AV1@AEBVCompoundTag@@@Z",
 			this, t);
 	}
@@ -193,200 +135,220 @@ struct ItemStackBase {
 	Item* getItem() {
 		return SYMCALL<Item*>("?getItem@ItemStackBase@@QEBAPEBVItem@@XZ", this);
 	}
+	void fromJson(Json::Value j) {
+		Tag* t = toTag(j);
+		fromTag(t);
+		t->deCompound();
+		delete t;
+	}
 };
 struct ItemStack : ItemStackBase {};
 struct Container {
-	// »ñÈ¡ÈİÆ÷ÄÚËùÓĞÎïÆ·
-	auto getSlots() {
+	// è·å–å®¹å™¨å†…æ‰€æœ‰ç‰©å“
+	vector<ItemStack*> getSlots() {
 		vector<ItemStack*> s;
 		SYMCALL<VA>("?getSlots@Container@@UEBA?BV?$vector@PEBVItemStack@@V?$allocator@PEBVItemStack@@@std@@@std@@XZ",
 			this, &s);
 		return s;
 	}
+	void clearItem(int slot, int num) {
+		SYMCALL("?removeItem@Container@@UEAAXHH@Z", this, slot, num);
+	}
 };
+#pragma endregion
+#pragma region Actor
 struct Actor {
-	// »ñÈ¡ÉúÎïÃû³ÆĞÅÏ¢
+	// è·å–ç”Ÿç‰©åç§°ä¿¡æ¯
 	string getNameTag() {
 		return SYMCALL<string&>("?getNameTag@Actor@@UEBAAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ", this);
 	}
-	// »ñÈ¡ÉúÎïµ±Ç°Ëù´¦Î¬¶ÈID
+	// è·å–ç”Ÿç‰©å½“å‰æ‰€å¤„ç»´åº¦ID
 	int getDimensionId() {
 		int did;
 		SYMCALL<int&>("?getDimensionId@Actor@@UEBA?AV?$AutomaticID@VDimension@@H@@XZ",
 			this, &did);
 		return did;
 	}
-	// »ñÈ¡ÉúÎïµ±Ç°ËùÔÚ×ø±ê
+	// è·å–ç”Ÿç‰©å½“å‰æ‰€åœ¨åæ ‡
 	Vec3* getPos() {
 		return SYMCALL<Vec3*>("?getPos@Actor@@UEBAAEBVVec3@@XZ", this);
 	}
-	// ÊÇ·ñĞü¿Õ
+	// æ˜¯å¦æ‚¬ç©º
 	bool isStand() {// IDA MovePlayerPacket::MovePlayerPacket 30
 		return f(bool, this + 448);
 	}
-	// È¡·½¿éÔ´
-	BlockSource* getRegion() {
-		return f(BlockSource*, this + 3312);
+	// å–æ–¹å—æº
+	BlockSource* getBlockSource() {
+		return f(BlockSource*, this + 840);//å¯¹
 	}
-	// »ñÈ¡ÊµÌåÀàĞÍ
+	ItemStack* getArmor(int slot) {
+		return SYMCALL<ItemStack*>("?getArmor@Actor@@UEBAAEBVItemStack@@W4ArmorSlot@@@Z",
+			this,slot);
+	}
+	// è·å–å®ä½“ç±»å‹
 	unsigned getEntityTypeId() {
-		return f(unsigned, this + 948);
+		return f(unsigned, this + 968);
+		//return f(unsigned, this + 964);
 	}
-	// »ñÈ¡²éÑ¯ÓÃID
+	// è·å–æŸ¥è¯¢ç”¨ID
 	VA getUniqueID() {
 		return SYMCALL<VA>("?getUniqueID@Actor@@QEBAAEBUActorUniqueID@@XZ", this);
 	}
-	// »ñÈ¡ÊµÌåÀàĞÍ
+	// è·å–å®ä½“ç±»å‹
 	string getEntityTypeName() {
 		string en_name;
 		SYMCALL<string&>("?EntityTypeToLocString@@YA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@W4ActorType@@W4ActorTypeNamespaceRules@@@Z",
 			&en_name, getEntityTypeId());
 		return en_name;
 	}
-	// ¸üĞÂÊôĞÔ
+	// æ›´æ–°å±æ€§
 	VA updateAttrs() {
 		return SYMCALL<VA>("?_sendDirtyActorData@Actor@@QEAAXXZ", this);
 	}
-	VA getAttribute() {
-		return f(VA, this + 1144);
-	}
-	// Ìí¼ÓÒ»¸ö×´Ì¬
+	//VA getAttribute() {
+		//return f(VA, this + 1144);
+	//}
+	// æ·»åŠ ä¸€ä¸ªçŠ¶æ€
 	VA addEffect(VA ef) {
 		return SYMCALL<VA>("?addEffect@Actor@@QEAAXAEBVMobEffectInstance@@@Z", this, ef);
 	}
-	// »ñÈ¡ÉúÃüÖµ
+	// è·å–ç”Ÿå‘½å€¼
 	int getHealth() {
 		return SYMCALL<int>("?getHealth@Actor@@QEBAHXZ", this);
 	}
 	int getMaxHealth() {
 		return SYMCALL<int>("?getMaxHealth@Actor@@QEBAHXZ", this);
 	}
-	void setHealth(float value, float max) {
+	void setHealth(int value, int max) {
 		VA hattr = ((*(VA(__fastcall**)(Actor*, void*))(*(VA*)this + 1552))(
 			this, SYM("?HEALTH@SharedAttributes@@2VAttribute@@B")));
-		f(float, hattr + 132) = value;
-		f(float, hattr + 128) = max;
+		f(int, hattr + 132) = value;
+		f(int, hattr + 128) = max;
 		//SYMCALL("?_setDirty@AttributeInstance@@AEAAXXZ", hattr);
 	}
+	Tag* save() {
+		Tag* t = newTag(Compound);
+		SYMCALL("?save@Actor@@UEAA_NAEAVCompoundTag@@@Z", this, t);
+		return t;
+	}
+	
 };
 struct Mob : Actor {
-	// »ñÈ¡×´Ì¬ÁĞ±í
+	struct MobEffectInstance { char fill[0x1C]; };
+	// è·å–çŠ¶æ€åˆ—è¡¨
 	auto getEffects() {	// IDA Mob::addAdditionalSaveData 84
 		return (vector<MobEffectInstance>*)((VA*)this + 190);
 	}
-	// »ñÈ¡×°±¸ÈİÆ÷
-	VA getArmor() {		// IDA Mob::addAdditionalSaveData
-		return VA(this) + 1400;
-	}
-	// »ñÈ¡ÊÖÍ·ÈİÆ÷
-	VA getHands() {
-		return VA(this) + 1408;		// IDA Mob::readAdditionalSaveData
-	}
-	// ±£´æµ±Ç°¸±ÊÖÖÁÈİÆ÷
+	// ä¿å­˜å½“å‰å‰¯æ‰‹è‡³å®¹å™¨
 	VA saveOffhand(VA hlist) {
 		return SYMCALL<VA>("?saveOffhand@Mob@@IEBA?AV?$unique_ptr@VListTag@@U?$default_delete@VListTag@@@std@@@std@@XZ",
 			this, hlist);
 	}
-	// »ñÈ¡µØÍ¼ĞÅÏ¢
+	/*
+	// è·å–åœ°å›¾ä¿¡æ¯
 	VA getLevel() {// IDA Mob::die 143
 		return f(VA, this + 856);
-	}
+	}*/
 };
 struct Player : Mob {
-	// È¡uuid
 	string getUuid() {// IDA ServerNetworkHandler::_createNewPlayer 217
 		string p;
 		SYMCALL<string&>("?asString@UUID@mce@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
-			this + 2824, &p);
+			this + 2832, &p);
+		//SYMCALL<string&>("?asString@UUID@mce@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ",
+			//this + 2824, &p);
 		return p;
 	}
-	// ·¢ËÍÊı¾İ°ü
+	// å‘é€æ•°æ®åŒ…
 	void sendPacket(VA pkt) {
 		return SYMCALL<void>("?sendNetworkPacket@ServerPlayer@@UEBAXAEAVPacket@@@Z",
 			this, pkt);
 	}
-	// ¸ù¾İµØÍ¼ĞÅÏ¢»ñÈ¡Íæ¼Òxuid
-	string& getXuid() {
-		return SYMCALL<string&>("?getPlayerXUID@Level@@QEBAAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBVUUID@mce@@@Z",
-			getLevel(), this + 2824);
+	// æ ¹æ®åœ°å›¾ä¿¡æ¯è·å–ç©å®¶xuid
+	string getXuid(struct Level* level) {
+		return SYMCALL<string&>("?getPlayerXUID@Level@@UEBAAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBVUUID@mce@@@Z",
+			level, (VA)this + 2832);
 	}
-	// ÖØÉè·şÎñÆ÷Íæ¼ÒÃû
+	// é‡è®¾æœåŠ¡å™¨ç©å®¶å
 	void setName(string name) {
 		SYMCALL("?setName@Player@@UEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
 			this, name);
 	}
-	// »ñÈ¡ÍøÂç±êÊ¶·û
+	// è·å–ç½‘ç»œæ ‡è¯†ç¬¦
 	VA getNetId() {
-		return (VA)this + 2536;// IDA ServerPlayer::setPermissions 34
+		return (VA)this + 2544;
+		//return (VA)this + 2536;// IDA ServerPlayer::setPermissions 34
 	}
-	// »ñÈ¡±³°ü
+	// è·å–èƒŒåŒ…
 	Container* getContainer() {
-		return (Container*)f(VA, f(VA, this + 3048) + 176);
+		return (Container*)f(VA, f(VA, this + 3040) + 176);
+		//return (Container*)f(VA, f(VA, this + 3048) + 176);
 	}
 	VA getContainerManager() {
-		return (VA)this + 3040;		// IDA Player::setContainerManager 18
+		return (VA)this + 3024;
+		//return (VA)this + 3040;		// IDA Player::setContainerManager 18
 	}
-	// »ñÈ¡Ä©Ó°Ïä
-	VA getEnderChestContainer() {
-		return SYMCALL<VA>("?getEnderChestContainer@Player@@QEAAPEAVEnderChestContainer@@XZ", this);
+	// è·å–æœ«å½±ç®±
+	Container* getEnderChestContainer() {
+		return SYMCALL<Container*>("?getEnderChestContainer@Player@@QEAAPEAVEnderChestContainer@@XZ", this);
 	}
-	// ÉèÖÃÒ»¸ö×°±¸
+	// è®¾ç½®ä¸€ä¸ªè£…å¤‡
 	VA setArmor(int i, ItemStack* item) {
 		return SYMCALL<VA>("?setArmor@ServerPlayer@@UEAAXW4ArmorSlot@@AEBVItemStack@@@Z", this, i, item);
 	}
-	// ÉèÖÃ¸±ÊÖ
+	// è®¾ç½®å‰¯æ‰‹
 	VA setOffhandSlot(ItemStack* item) {
 		return SYMCALL<VA>("?setOffhandSlot@Player@@UEAAXAEBVItemStack@@@Z", this, item);
 	}
-	// Ìí¼ÓÒ»¸öÎïÆ·
-	void addItem(ItemStack* item) {
-		(*(__int64(__fastcall**)(VA, struct ItemStack*))(*f(VA*, f(VA, this + 366) + 176) + 256))(
-			f(VA, f(VA, this + 366) + 176),
-			item);
-		//SYMCALL<VA>("?add@Player@@UEAA_NAEAVItemStack@@@Z", this, item);
+	// æ·»åŠ ä¸€ä¸ªç‰©å“
+	void addItem(ItemStackBase* item) {
+		SYMCALL<VA>("?addItem@@YAXAEAVPlayer@@AEAVItemStack@@@Z", this, item);
 	}
-	// »ñÈ¡µ±Ç°Ñ¡ÖĞµÄ¿òÎ»ÖÃ
+	// è·å–å½“å‰é€‰ä¸­çš„æ¡†ä½ç½®
 	int getSelectdItemSlot() {// IDA Player::getSelectedItem 12
-		return f(unsigned, f(VA, this + 3048) + 16);
+		return f(unsigned, f(VA, this + 3040) + 16);
+		//return f(unsigned, f(VA, this + 3048) + 16);
 	}
-	// »ñÈ¡µ±Ç°ÎïÆ·
+	// è·å–å½“å‰ç‰©å“
 	ItemStack* getSelectedItem() {
 		return SYMCALL<ItemStack*>("?getSelectedItem@Player@@QEBAAEBVItemStack@@XZ", this);
 	}
-	// »ñÈ¡±³°üÎïÆ·
+	// è·å–èƒŒåŒ…ç‰©å“
 	ItemStack* getInventoryItem(int slot) {
 		return SYMCALL<ItemStack*>("?getItem@FillingContainer@@UEBAAEBVItemStack@@H@Z", *(__int64**)(*((__int64*)this + 0x17D) + 0xB0), slot);
 	}
-	// »ñÈ¡ÓÎÏ·Ê±ÃüÁîÈ¨ÏŞ
+	// è·å–æ¸¸æˆæ—¶å‘½ä»¤æƒé™
 	char getPermission() {// IDA ServerPlayer::setPermissions 17
-		return *f(char*, this + 2216);
+		return *f(char*, this + 2224);
+		//return *f(char*, this + 2216);
 	}
-	// ÉèÖÃÓÎÏ·Ê±ÃüÁîÈ¨ÏŞ
+	// è®¾ç½®æ¸¸æˆæ—¶å‘½ä»¤æƒé™
 	void setPermission(char m) {
 		SYMCALL("?setPermissions@ServerPlayer@@UEAAXW4CommandPermissionLevel@@@Z",
 			this, m);
 	}
-	// »ñÈ¡ÓÎÏ·Ê±ÓÎÍæÈ¨ÏŞ
-	char getPermissionLevel() {// IDA Abilities::setPlayerPermissions ?
-		return f(char, f(char*, this + 2192) + 1);
-	}
-	// ÉèÖÃÓÎÏ·Ê±ÓÎÍæÈ¨ÏŞ
+	// è·å–æ¸¸æˆæ—¶æ¸¸ç©æƒé™
+	//char getPermissionLevel() {// IDA Abilities::setPlayerPermissions ?
+	//	return f(char, f(char*, this + 2192) + 1);
+	//}
+	// è®¾ç½®æ¸¸æˆæ—¶æ¸¸ç©æƒé™
 	void setPermissionLevel(char m) {
 		SYMCALL("?setPlayerPermissions@Abilities@@QEAAXW4PlayerPermissionLevel@@@Z",
 			this + 2192, m);
 	}
-	// ¸üĞÂËùÓĞÎïÆ·ÁĞ±í
-	void updateInventory() {
-		SYMCALL<VA>("?forceBalanceTransaction@InventoryTransactionManager@@QEAAXXZ",
-			this + 4592);// IDA Player::drop 65
+	void sendInventroy() {
+		SYMCALL("?sendInventory@ServerPlayer@@UEAAX_N@Z",
+			this, true);
 	}
-	//´«ËÍ
 	void teleport(Vec3 target, int dim) {
-		SYMCALL("?teleport@TeleportCommand@@SAXAEAVActor@@VVec3@@PEAV3@V?$AutomaticID@VDimension@@H@@VRelativeFloat@@4HAEBUActorUniqueID@@@Z",
-			this, target, 0, dim, 0, 0, 0, SYM("?INVALID_ID@ActorUniqueID@@2U1@B"));
+		SYMCALL("?teleport@TeleportCommand@@SAXAEAVActor@@VVec3@@PEAV3@V?$AutomaticID@VDimension@@H@@VRelativeFloat@@4H@Z",
+			this, target, 0, dim, 0, 0, 0);
+		//SYMCALL("?teleport@TeleportCommand@@SAXAEAVActor@@VVec3@@PEAV3@V?$AutomaticID@VDimension@@H@@VRelativeFloat@@4HAEBUActorUniqueID@@@Z",
+		//	this, target, 0, dim, 0, 0, 0, SYM("?INVALID_ID@ActorUniqueID@@2U1@B"));
 	}
 };
-struct ScoreboardId;
+#pragma endregion
+#pragma region Scoreboard
 struct PlayerScore {
 	VA getscore() {
 		return f(VA, this + 4);
@@ -401,19 +363,32 @@ struct ScoreInfo {
 		return f(int, this + 12);
 	}
 };
-
 struct ScoreboardId {
 	int id;
+	VA null;
+};
+struct ScorePacketInfo {
+	ScoreboardId sid;
+	string obj_name = "name";
+	unsigned score;
+	enum Type : char { Invalid = 0, Player = 1, Actor = 2, Fake = 3 };
+	Type type = Fake;
+	VA pid;
+	VA aid;
+	string fake_name;
+
+	ScorePacketInfo(ScoreboardId* s, unsigned num, const string& fake) :
+		sid(*s), score(num), fake_name(fake) {}
+
 };
 struct Objective {
-	//´Óobjective::objectiveµÃµ½
-	//»ñÈ¡¼Æ·Ö°åÃû³Æ
-	auto getscorename() {
-		return *(std::string*)((VA)(this) + 64);
+	//è·å–è®¡åˆ†æ¿åç§°
+	auto getScoreName() {
+		return f(string, this + 64);
 	}
-	//»ñÈ¡¼Æ·Ö°åÕ¹Ê¾Ãû³Æ
-	auto getscoredisplayname() {
-		return *(std::string*)((VA)(this) + 96);
+	//è·å–è®¡åˆ†æ¿å±•ç¤ºåç§°
+	auto getScoreDisplayName() {
+		return f(string, this + 96);
 	}
 	auto createScoreboardId(Player* player) {
 		return SYMCALL<ScoreboardId*>("?createScoreboardId@ServerScoreboard@@UEAAAEBUScoreboardId@@AEBVPlayer@@@Z", this, player);
@@ -428,11 +403,15 @@ struct Scoreboard {
 	auto getObjective(string str) {
 		return SYMCALL<Objective*>("?getObjective@Scoreboard@@QEBAPEAVObjective@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z", this, &str);
 	}
-	auto getScoreboardId(string* str) {
-		return SYMCALL<ScoreboardId*>("?getScoreboardId@Scoreboard@@QEBAAEBUScoreboardId@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z", this, str);
+	auto getScoreboardId(const string& str) {
+		return SYMCALL<ScoreboardId*>("?getScoreboardId@Scoreboard@@QEBAAEBUScoreboardId@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
+			this, &str);
 	}
-	vector<Objective*>* getObjectives() {
-		return SYMCALL<vector<Objective*>*>("?getObjectives@Scoreboard@@QEBA?AV?$vector@PEBVObjective@@V?$allocator@PEBVObjective@@@std@@@std@@XZ", this);
+	vector<Objective*> getObjectives() {
+		vector<Objective*> s;
+		SYMCALL("?getObjectives@Scoreboard@@QEBA?AV?$vector@PEBVObjective@@V?$allocator@PEBVObjective@@@std@@@std@@XZ",
+			this, &s);
+		return s;
 	}
 	auto getDisplayInfoFiltered(string* str) {
 		return SYMCALL<vector<PlayerScore>*>("?getDisplayInfoFiltered@Scoreboard@@QEBA?AV?$vector@UPlayerScore@@V?$allocator@UPlayerScore@@@std@@@std@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@3@@Z", this, str);
@@ -443,13 +422,41 @@ struct Scoreboard {
 	auto getScoreboardId(Player* a2) {
 		return SYMCALL<ScoreboardId*>("?getScoreboardId@Scoreboard@@QEBAAEBUScoreboardId@@AEBVActor@@@Z", this, a2);
 	}
-	//¸ü¸ÄÍæ¼Ò·ÖÊı
+	//æ›´æ”¹ç©å®¶åˆ†æ•°
 	int modifyPlayerScore(ScoreboardId* a3, Objective* a4, int count, int mode) {
 		bool a2 = true;
 		return SYMCALL<int>("?modifyPlayerScore@Scoreboard@@QEAAHAEA_NAEBUScoreboardId@@AEAVObjective@@HW4PlayerScoreSetFunction@@@Z",
 			this, &a2, a3, a4, count, mode);
 	}
+	auto createScoreBoardId(const string& s) {
+		return SYMCALL<ScoreboardId*>("?createScoreboardId@ServerScoreboard@@UEAAAEBUScoreboardId@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z",
+			this, &s);
+	}
 	auto createScoreBoardId(Player* player) {
 		return SYMCALL<ScoreboardId*>("?createScoreboardId@ServerScoreboard@@UEAAAEBUScoreboardId@@AEBVPlayer@@@Z", this, player);
+	}
+};
+#pragma endregion
+struct Level {
+	// è·å–æ–¹å—æº æ²¡è¿™ä¸ªç»´åº¦è¿”å›ç©ºæŒ‡é’ˆ
+	BlockSource* getBlockSource(int did) {
+		VA d = SYMCALL<VA>("?getDimension@Level@@QEBAPEAVDimension@@V?$AutomaticID@VDimension@@H@@@Z",
+			this, did);
+		if (!d)return 0;
+		return f(BlockSource*, d + 96);
+		//return f(BlockSource*, d + 88);// IDA Level::tickEntities 120
+	}
+	//VA getScoreBoard() {// IDA Level::removeEntityReferences
+		//return f(VA, this + 8376);
+	//}
+	Actor* fetchEntity(VA id) {
+		return SYMCALL< Actor*>("?fetchEntity@Level@@UEBAPEAVActor@@UActorUniqueID@@_N@Z",
+			this, id, false);
+	}
+};
+struct ServerNetworkHandler {
+	Player* _getServerPlayer(VA id, VA pkt) {
+		return SYMCALL<Player*>("?_getServerPlayer@ServerNetworkHandler@@AEAAPEAVServerPlayer@@AEBVNetworkIdentifier@@E@Z",
+			this, id, f(char, pkt + 16));
 	}
 };
